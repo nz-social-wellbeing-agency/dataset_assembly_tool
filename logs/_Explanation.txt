@@ -1,0 +1,23 @@
+Log files from running the assembly tool are saved here.
+These logs trigger when the run_assembly.R script is executed.
+
+The purpose of the log is two-fold:
+  1. To support debugging
+  2. To record usage of the tool
+
+Deleting the log files or deactivating logging is discouraged.
+
+(1) The log file helps by recording how the tool is being used.
+So when error occur potential causes can be identified.
+
+(2) Without log files we may lack evidence that the tool is being
+used and hence further development of the tool (or of related tools)
+may be difficult to justify.
+
+Log files are saved locally in the same location as the tool.
+
+The content of the log file can be summarised as:
+  1. start and end of tool run
+  2. time tool started & ended
+  3. user configuration of the tool
+  4. version (hash) of the core scripts
