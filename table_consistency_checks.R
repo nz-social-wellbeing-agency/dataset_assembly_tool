@@ -21,6 +21,7 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2020-11-18 SA v2 for release
 #' 2020-05-04 SA Added checks for number and non-overlapping date periods
 #' 2020-04-15 SA Extend unique and join-covered to multiple columns
 #' 2020-04-14 SA v1

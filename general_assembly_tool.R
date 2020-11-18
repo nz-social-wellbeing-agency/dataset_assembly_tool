@@ -1,5 +1,5 @@
 ###############################################################################
-#' Description: Data foundation assembly tool
+#' Description: Data assembly tool
 #'
 #' Input: Two control files (1) population definition, (2) measures for analysis
 #'
@@ -15,6 +15,7 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2020-11-18 SA v2 for release
 #' 2020-01-06 SA v1
 #' 2019-11-26 SA v0
 #' #############################################################################

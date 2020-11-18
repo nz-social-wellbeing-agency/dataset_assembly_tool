@@ -1,5 +1,5 @@
 ###############################################################################
-#' Description: Assembler guided dataset creation
+#' Description: Example run of the Tool Accelerating Dataset Assembly
 #'
 #' Input: User parameters
 #'
@@ -14,6 +14,7 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2020-11-18 SA v2 for release
 #' 2020-05-12 SA v1
 #' 2020-01-08 SA v0
 #' #############################################################################
@@ -29,7 +30,6 @@ MEASURES_FILE <- "measures.xlsx"
 # outputs
 OUTPUT_DATABASE <- "[IDI_Sandpit]"
 OUTPUT_SCHEMA <- "[DL-MAA20YY-XX]"
-
 LONG_THIN_TABLE_NAME <- "[tmp_assembled_data]"
 RECTANGULAR_TABLE_NAME <- "[tmp_rectangular]"
 OVERWRITE_EXISTING_TABLES <- TRUE # {FALSE will append to LONG_THIN_TABLE but RECTANGULAR_TABLE must not exist}

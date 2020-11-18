@@ -15,10 +15,9 @@
 #'  - Uses code folding by headers (Alt + O to collapse all)
 #'
 #' Issues:
-#'  - 2020-01-06 produces rlang warnings on first run each session due to function depreciation.
-#'    We do not use rlang package directly, so this warning is caused by a package that depends on rlang.
 #'
 #' History (reverse order):
+#' 2020-11-18 SA v2 for release
 #' 2020-01-06 SA v1
 #' 2019-12-12 SA v0
 #' #############################################################################

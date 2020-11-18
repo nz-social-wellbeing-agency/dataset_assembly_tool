@@ -1,5 +1,5 @@
 ###############################################################################
-#' Description: Assembler guided dataset creation
+#' Description: Run the Tool Accelerating Dataset Assembly
 #'
 #' Input: User parameters
 #'
@@ -14,6 +14,7 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2020-11-18 SA v2 for release
 #' 2020-05-12 SA v1
 #' 2020-01-08 SA v0
 #' #############################################################################

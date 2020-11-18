@@ -15,6 +15,7 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2020-11-18 SA v2 for release
 #' 2020-01-09 SA split SQL focused functions off into dbplyr_helper_functions.R
 #' 2020-01-06 pivot function tested, unit tests written and confirmed
 #' 2019-11-18 making package use explicit

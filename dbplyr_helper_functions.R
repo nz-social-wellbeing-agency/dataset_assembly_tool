@@ -1,5 +1,5 @@
 ###############################################################################
-#' Description: dbplyr support functions for R development in the IDI.
+#' Description: dbplyr support functions for R development with SQL server
 #'
 #' Input: Connection details that must be manually set.
 #'
@@ -19,7 +19,10 @@
 #' Issues:
 #'
 #' History (reverse order):
-#' 2020-01-09 SA split dbplyr support out from utility_functions.R
+#' 2020-11-18 SA v2 for release
+#' 2020-07-12 SA addition of collapse indicator column function
+#' 2020-02-13 SA addition of pivot function
+#' 2020-01-09 SA v1 split dbplyr support out from utility_functions.R
 #' #############################################################################
 
 # connection details
