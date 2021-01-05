@@ -26,4 +26,4 @@ We encourage researchers to adopt the assembly tool into their own research proj
 We discourage researchers in the IDI from editing the code of the tool. Part of the value of a tool is the consistency it provides between researchers. When researchers begin to edit the tool, then we no longer have a shared tool but instead have a collection of bespoke code that with a common origin. The overview document provides some guidance for other ways you can build upon the Dataset Assembly Tool without editing its code.
 
 ## Getting Help
-If you have any questions email info@swa.govt.nz
+General enquiries can be sent to info@swa.govt.nz, tool specific questions can be sent to assembly_tool@swa.govt.nz
