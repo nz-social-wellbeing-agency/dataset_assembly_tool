@@ -94,10 +94,12 @@ if (!RUN_CHECKS_ONLY) {
   #### pivot to create rectangular research ready table ---------------------------------
   # connect
   db_con <- create_database_connection(database = OUTPUT_DATABASE)
-  # compress assembled table
+  # compress & index assembled table
   run_time_inform_user("compacting long thin table", context = "heading", print_level = VERBOSE)
   compress_table(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, LONG_THIN_TABLE_NAME)
-
+  run_time_inform_user("indexing long thin table", context = "heading", print_level = VERBOSE)
+  create_clustered_index(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, LONG_THIN_TABLE_NAME, "identity_column")
+  
   # pivot table
   pivoted_table <- create_access_point(db_connection = db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, tbl_name = LONG_THIN_TABLE_NAME) %>%
     pivot_table(label_column = "label_measure", value_column = "value_measure")
