@@ -632,6 +632,7 @@ pivot_table <- function(input_tbl, label_column, value_column, aggregator = "SUM
 
   pivot_columns <- input_tbl %>%
     dplyr::select(!!sym(label_column)) %>%
+	dplyr::filter(!is.na(!!sym(label_column))) %>%
     dplyr::distinct() %>%
     dplyr::collect() %>%
     unlist(use.names = FALSE)

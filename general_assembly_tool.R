@@ -436,6 +436,7 @@ assemble_output_table <- function(population_table, measure_table,
           "ON {p_identity_column} = {m_identity_column}\n",
           "AND {p_start_date} <= {m_end_date}\n",
           "AND {m_start_date} <= {p_end_date}\n",
+          "WHERE {calculation$label} IS NOT NULL\n",
           "{GROUP_BY}"
         ))
       )
