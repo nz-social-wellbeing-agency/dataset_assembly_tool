@@ -65,12 +65,12 @@ general_data_assembly_tool <- function(
   if (is.tbl(input_population_and_period_table)) {
     input_population_and_period_table <- as.data.frame(input_population_and_period_table)
   }
-  assert(is.data.frame(input_population_and_period_table), "population and period input invalid")
+  assert(is.data.frame(input_population_and_period_table), "population and period control input invalid")
 
   if (is.tbl(input_measures_to_assemble_table)) {
     input_measures_to_assemble_table <- as.data.frame(input_measures_to_assemble_table)
   }
-  assert(is.data.frame(input_measures_to_assemble_table), "population and period input invalid")
+  assert(is.data.frame(input_measures_to_assemble_table), "measures control input invalid")
 
   #### validate output and controls ----
   no_special_characters(output_database)
