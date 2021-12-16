@@ -42,6 +42,8 @@ source("table_consistency_checks.R")
 source("dbplyr_helper_functions.R")
 source("general_assembly_tool_functions.R")
 source("general_assembly_tool.R")
+source("overview_dataset.R")
+source("summary_confidential.R")
 testthat::test_dir("./tests")
 
 ## test in sections -------------------------------------------------------------------------------
@@ -81,6 +83,17 @@ if (FALSE) {
   source("general_assembly_tool.R")
   testthat::test_file("./tests/test_GAT_function_handling.R")
   testthat::test_file("./tests/test_GAT_integration.R")
+  
+  # test generating overview of datasets
+  source("overview_dataset.R")
+  testthat::test_file("./tests/test_OD_filter.R")
+  testthat::test_file("./tests/test_OD_report.R")
+  
+  # test summarising and confidentialising of results
+  source("summary_confidential.R")
+  testthat::test_file("./tests/test_SC_support_functions.R")
+  testthat::test_file("./tests/test_SC_summarise.R")
+  testthat::test_file("./tests/test_SC_confidentialise.R")
 }
 
 ## tidy up ----------------------------------------------------------------------------------------
