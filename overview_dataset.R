@@ -90,12 +90,12 @@ explore_report <- function(df, id_column = NA, target = NA, output_file = NA, ou
   # explore
   if(is.na(target)){
     sink("tmp")
+	on.exit(sink())
     explore::report(data = df, output_file = output_file, output_dir = output_dir)
-    sink()
   } else {
     sink("tmp")
+	on.exit(sink())
     explore::report(data = df, target = !!sym(target), output_file = output_file, output_dir = output_dir)
-    sink()
   }
   unlink("tmp")
   return(paste0(output_file,".html"))
