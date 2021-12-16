@@ -17,6 +17,7 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2021-10-04 SA output tests added
 #' 2020-11-18 SA v2 for release
 #' 2020-01-06 SA v1
 #' 2019-12-12 SA v0
@@ -66,7 +67,7 @@ if (FALSE) {
 
   # test dbplyr helpers
   #
-  # excludes tests of the functions: create_clustered_index, write_for_reuse
+  # excludes tests of the functions: create_clustered_index, create_nonclustered_index, write_for_reuse
   # purge_tables_by_prefix, and compress_table
   source("dbplyr_helper_functions.R")
   testthat::test_file("./tests/test_DHF_independent_functions.R")

@@ -15,7 +15,7 @@ create_clustered_index(db_con, our_database, our_schema, rectangular_table, "snz
 
 # snz_uid list where aged [18,64] with some earnings
 ever_earned <- raw_table %>%
-  select(snz_uid, birth_year, was_employed) %>%
+  select(identity_column, birth_year, was_employed) %>%
   mutate(age2009 = 2009 - birth_year) %>%
   filter(!is.na(birth_year)) %>%
   filter(
@@ -23,18 +23,18 @@ ever_earned <- raw_table %>%
     age2009 <= 64
   ) %>%
   filter(!is.na(was_employed)) %>%
-  select("snz_uid") %>%
+  select("identity_column") %>%
   distinct()
 
 # check underlying SQL code
 ever_earned %>% show_query()
 # save to reduce computation time
-ever_earned <- write_for_reuse(db_con, our_database, our_schema, "[tmp_ever_earned]", ever_earned, index_columns = "snz_uid")
+ever_earned <- write_for_reuse(db_con, our_database, our_schema, "[tmp_ever_earned]", ever_earned, index_columns = "identity_column")
 
 # tidy assembled table
 tidied_table <- raw_table %>%
   # must have ever earned
-  semi_join(ever_earned, by = "snz_uid") %>%
+  semi_join(ever_earned, by = "identity_column") %>%
   # collapse histograms
   collapse_indicator_columns("sex_code=", 1, "sex_code") %>%
   # filter out obvious incomplete records
