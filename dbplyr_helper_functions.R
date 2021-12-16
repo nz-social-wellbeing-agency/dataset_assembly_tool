@@ -204,7 +204,7 @@ write_for_reuse <- function(db_connection, db, schema, tbl_name, tbl_to_save, in
   run_time_inform_user("completed write", context = "all")
 
   if (length(index_columns) > 1 | !is.na(index_columns[1])) {
-    result <- create_clustered_index(db_connection, db, schema, tbl_name, index_columns)
+    result <- create_nonclustered_index(db_connection, db, schema, tbl_name, index_columns)
     run_time_inform_user("added index", context = "all")
   }
 
@@ -355,12 +355,16 @@ write_to_database <- function(input_tbl, db_connection, db, schema, tbl_name, OV
   create_access_point(db_connection, db, schema, tbl_name)
 }
 
-## Add clustered index to a table -----------------------------------------------------------------
+## Add nonclustered index to a table -----------------------------------------------------------------
 #'
-#' Note: at most a single clustered index can be added to each table.
-#' This operation is potentially expensive, so should be used only where needed.
+#' Create a nonclustered index to improve table performance.
+#' Unlike clustered indexes, multiple nonclustered indexes can be created.
+#' 
+#' Permanent high reuse tables may benefit from clustered indexes. But most researcher-created
+#' tables are used a limited number of times and hence do not justify the additional overhead
+#' of creating a clustered index. Non-clustered indexes are recommended in these cases.
 #'
-create_clustered_index <- function(db_connection, db, schema, tbl_name, cluster_columns) {
+create_nonclustered_index <- function(db_connection, db, schema, tbl_name, index_columns) {
   warn_if_missing_delimiters(db, schema, tbl_name)
   # table in connection
   assert(
@@ -369,15 +373,46 @@ create_clustered_index <- function(db_connection, db, schema, tbl_name, cluster_
   )
   # columns are in table
   assert(
-    all(cluster_columns %in% colnames(create_access_point(db_connection, db, schema, tbl_name))),
+    all(index_columns %in% colnames(create_access_point(db_connection, db, schema, tbl_name))),
     "database table does not have the required columns"
   )
 
-  cluster_columns <- sapply(cluster_columns, add_delimiters, delimiter = "[]")
-  cluster_columns <- paste0(cluster_columns, collapse = ", ")
+  index_columns <- sapply(index_columns, add_delimiters, delimiter = "[]")
+  index_columns <- paste0(index_columns, collapse = ", ")
 
-  query <- glue::glue("CREATE CLUSTERED INDEX my_index_name ON {db}.{schema}.{tbl_name} ({cluster_columns})")
+  query <- glue::glue("CREATE NONCLUSTERED INDEX my_index_name ON {db}.{schema}.{tbl_name} ({index_columns})")
 
+  # print(query)
+  save_to_sql(query, "add_nonclustered_index")
+  result <- DBI::dbExecute(db_connection, as.character(query))
+}
+
+## Add clustered index to a table -----------------------------------------------------------------
+#'
+#' Note: at most a single clustered index can be added to each table.
+#' This operation is potentially expensive, so should be used only where needed.
+#' 
+#' For researcher created tables non-clustered indexes are recommended.
+#' This function only provided for backwards compatibility.
+#'
+create_clustered_index <- function(db_connection, db, schema, tbl_name, index_columns) {
+  warn_if_missing_delimiters(db, schema, tbl_name)
+  # table in connection
+  assert(
+    table_or_view_exists_in_db(db_connection, db, schema, tbl_name),
+    glue::glue("{db}.{schema}.{tbl_name} not found in database")
+  )
+  # columns are in table
+  assert(
+    all(index_columns %in% colnames(create_access_point(db_connection, db, schema, tbl_name))),
+    "database table does not have the required columns"
+  )
+  
+  index_columns <- sapply(index_columns, add_delimiters, delimiter = "[]")
+  index_columns <- paste0(index_columns, collapse = ", ")
+  
+  query <- glue::glue("CREATE CLUSTERED INDEX my_index_name ON {db}.{schema}.{tbl_name} ({index_columns})")
+  
   # print(query)
   save_to_sql(query, "add_clustered_index")
   result <- DBI::dbExecute(db_connection, as.character(query))
@@ -635,7 +670,8 @@ pivot_table <- function(input_tbl, label_column, value_column, aggregator = "SUM
 	dplyr::filter(!is.na(!!sym(label_column))) %>%
     dplyr::distinct() %>%
     dplyr::collect() %>%
-    unlist(use.names = FALSE)
+    unlist(use.names = FALSE) %>%
+    sort()
 
   # check no special characters in new column labels
   # sapply(pivot_columns, no_special_characters)

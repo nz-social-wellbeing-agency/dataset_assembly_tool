@@ -98,7 +98,7 @@ if (!RUN_CHECKS_ONLY) {
   run_time_inform_user("compacting long thin table", context = "heading", print_level = VERBOSE)
   compress_table(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, LONG_THIN_TABLE_NAME)
   run_time_inform_user("indexing long thin table", context = "heading", print_level = VERBOSE)
-  create_clustered_index(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, LONG_THIN_TABLE_NAME, "identity_column")
+  create_nonclustered_index(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, LONG_THIN_TABLE_NAME, "identity_column")
   
   # pivot table
   pivoted_table <- create_access_point(db_connection = db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, tbl_name = LONG_THIN_TABLE_NAME) %>%
@@ -110,8 +110,8 @@ if (!RUN_CHECKS_ONLY) {
   # tidy
   run_time_inform_user("compacting rectangular table", context = "heading", print_level = VERBOSE)
   compress_table(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, RECTANGULAR_TABLE_NAME)
-  run_time_inform_user("creating clustered index", context = "heading", print_level = VERBOSE)
-  create_clustered_index(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, RECTANGULAR_TABLE_NAME, "identity_column")
+  run_time_inform_user("creating nonclustered index", context = "heading", print_level = VERBOSE)
+  create_nonclustered_index(db_con, OUTPUT_DATABASE, OUTPUT_SCHEMA, RECTANGULAR_TABLE_NAME, "identity_column")
 
   # close connection
   close_database_connection(db_con)
