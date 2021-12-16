@@ -191,7 +191,7 @@ summarise_and_label <- function(df,
   
   if(make_count){
     output_df = df %>%
-      dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1)), .groups = "drop") %>%
+      dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1), na.rm = TRUE), .groups = "drop") %>%
       dplyr::collect() %>%
       dplyr::right_join(output_df, by = group_by_cols)
   }
