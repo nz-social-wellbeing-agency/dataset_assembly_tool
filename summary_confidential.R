@@ -88,7 +88,7 @@ has_long_thin_format <- function(df){
   
   
   # same number of col and val
-  same_number = sum(col00) == sum(val00)
+  same_number = sum(col00, na.rm = TRUE) == sum(val00, na.rm = TRUE)
   expected_columns = all(col00 | val00 | summary_var | summary)
   
   return(same_number & expected_columns)
@@ -161,10 +161,17 @@ summarise_and_label <- function(df,
   assert(is.logical(make_sum), "[make_sum] must be type logical")
   
   #### cleaning ----
+  df = dplyr::select(df, all_of(c(group_by_cols, summarise_col)))
+  
   if(remove.na.from.groups){
-    for(gg in group_by_cols){
-      df = dplyr::filter(df, !is.na(!!sym(gg)))
-    }
+    # apply filters in a single step
+    tmp = paste0(" !is.na(", group_by_cols, ") ")
+    df = dplyr::filter(df, `!!!`(rlang::parse_exprs(tmp)))
+    
+    ## prev version
+    # for(gg in group_by_cols){
+    #   df = dplyr::filter(df, !is.na(!!sym(gg)))
+    # }
   }
   
   if(clean == "na.as.zero"){
@@ -182,23 +189,35 @@ summarise_and_label <- function(df,
   df = dplyr::group_by(df, !!!syms(group_by_cols))
   
   if(make_distinct){
-    output_df = df %>%
+    tmp_df = df %>%
       dplyr::filter(!is.na(!!sym(summarise_col))) %>%
-      dplyr::summarise(distinct = dplyr::n_distinct(!!sym(summarise_col)), .groups = "drop") %>%
+      dplyr::summarise(distinct = dplyr::n_distinct(!!sym(summarise_col)))
+    
+    save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make distinct")
+    
+    output_df = tmp_df %>%
       dplyr::collect() %>%
       dplyr::right_join(output_df, by = group_by_cols)
   }
   
   if(make_count){
-    output_df = df %>%
-      dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1), na.rm = TRUE), .groups = "drop") %>%
+    tmp_df = df %>%
+      dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1), na.rm = TRUE))
+    
+    save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make count")
+    
+    output_df = tmp_df %>%
       dplyr::collect() %>%
       dplyr::right_join(output_df, by = group_by_cols)
   }
   
   if(make_sum){
-    output_df = df %>%
-      dplyr::summarise(sum = sum(!!sym(summarise_col), na.rm = TRUE), .groups = "drop") %>%
+    tmp_df = df %>%
+      dplyr::summarise(sum = sum(!!sym(summarise_col), na.rm = TRUE))
+    
+    save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make sum")
+    
+    output_df = tmp_df %>%
       dplyr::collect() %>%
       dplyr::right_join(output_df, by = group_by_cols)
   }
@@ -214,7 +233,8 @@ summarise_and_label <- function(df,
     
     output_df = output_df %>%
       dplyr::mutate(!!sym(col) := group_by_cols[ii]) %>%
-      dplyr::rename(!!sym(val) := !!sym(group_by_cols[ii]))
+      dplyr::rename(!!sym(val) := !!sym(group_by_cols[ii])) %>%
+      dplyr::mutate(!!sym(val) := as.character(!!sym(val)))
     
     col_order = c(col_order, col, val)
   }
