@@ -26,16 +26,24 @@
 #' Intended for grouping by in analysis.
 #' 
 #' always parameter is included in each output.
-#' drop.dupes controls whether duplicated parameters are discarded.
+#' 
+#' drop.dupes.within controls whether duplicated parameters within each set
+#' of output columns are discarded.
 #' For example: (a,b,c,a,b) becomes (a,b,c).
 #' Note: dplyr::group_by requires no duplicates so turning this off
 #' may produce errors if the output is used for summarising results.
+#' 
+#' drop.dupes.across control whether duplicate sets of paramters are discarded.
+#' For example: (a,b,c) and (a,c,b) will only output (a,b,c)
 #' 
 #' For example: always = (a,b,c), grp1 = (d,e), grp2 = (f,g)
 #' Returns list containing:
 #' (a,b,c,d,f), (a,b,c,d,g), (a,b,c,e,f), (a,b,c,e,g)
 #' 
-cross_product_column_names <- function(..., always = NULL, drop.dupes = TRUE){
+cross_product_column_names <- function(...,
+                                       always = NULL,
+                                       drop.dupes.within = TRUE,
+                                       drop.dupes.across = TRUE){
   # checks
   assert(is.null(always) | is.character(always), "[always] must be character")
   # setup
@@ -54,10 +62,24 @@ cross_product_column_names <- function(..., always = NULL, drop.dupes = TRUE){
   }
   
   # drop duplicates
-  if(drop.dupes){
+  if(drop.dupes.within){
     new_list = list()
     for(item in output){
       new_list = c(new_list, list(unique(item)))
+    }
+    output = new_list
+  }
+  
+  # remove duplicates across cross-products (ignores order)
+  if(drop.dupes.across){
+    new_list = list()
+    sort_list = list()
+    for(item in output){
+      sorted_item = sort(item)
+      if(!list(sorted_item) %in% sort_list){
+        sort_list = c(sort_list, list(sorted_item))
+        new_list = c(new_list, list(item))
+      }
     }
     output = new_list
   }

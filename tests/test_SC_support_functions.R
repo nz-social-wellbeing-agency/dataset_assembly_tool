@@ -19,7 +19,7 @@
 
 #' Testing the following functions that support summarising and confidentialising
 #'
-#' cross_product_column_names(..., always = NULL, drop.dupes = TRUE)
+#' cross_product_column_names(..., always = NULL, drop.dupes.within = TRUE, drop.dupes_across = TRUE)
 #' has_long_thin_format(df)
 #' randomly_round_vector(input_vector, base = 3, seeds = NULL)
 #' 
@@ -61,20 +61,39 @@ test_that("always appears in all products", {
   expect_setequal(out2, out_always)
 })
 
-test_that("product removes dupes", {
+test_that("product removes dupes within", {
   in1 = c("a","b")
   in2 = c("a","c")
   out_dupes_manual = list(c("a","a"),c("a","b"),c("a","c"),c("b","c"))
   out_no_dupes_manual = list(c("a"),c("a","b"),c("a","c"),c("b","c"))
   
-  out_dupes = cross_product_column_names(in1, in2, drop.dupes = FALSE)
-  out_no_dupes = cross_product_column_names(in1, in2, drop.dupes = TRUE)
+  out_dupes = cross_product_column_names(in1, in2, drop.dupes.within = FALSE)
+  out_no_dupes = cross_product_column_names(in1, in2, drop.dupes.within = TRUE)
   out_dupes = lapply(out_dupes, sort)
   out_no_dupes = lapply(out_no_dupes, sort)
   
   expect_setequal(out_dupes, out_dupes_manual)
   expect_setequal(out_no_dupes, out_no_dupes_manual)
 })
+
+test_that("product removes dupes across", {
+  in1 = c("a","b")
+  out_dupes_manual = list(c("a","a"),c("a","b"),c("b","a"),c("b","b"))
+  out_no_dupes_within_manual = list(c("a"),c("a","b"),c("b","a"),c("b"))
+  out_no_dupes_across_manual = list(c("a","a"),c("b","a"),c("b","b"))
+  out_no_dupes_both_manual = list(c("a"),c("b","a"),c("b"))
+  
+  out_dupes = cross_product_column_names(in1, in1, drop.dupes.within = FALSE, drop.dupes.across = FALSE)
+  out_no_dupes_within = cross_product_column_names(in1, in1, drop.dupes.within = TRUE, drop.dupes.across = FALSE)
+  out_no_dupes_across = cross_product_column_names(in1, in1, drop.dupes.within = FALSE, drop.dupes.across = TRUE)
+  out_no_dupes_both = cross_product_column_names(in1, in1, drop.dupes.within = TRUE, drop.dupes.across = TRUE)
+  
+  expect_setequal(out_dupes, out_dupes_manual)
+  expect_setequal(out_no_dupes_within, out_no_dupes_within_manual)
+  expect_setequal(out_no_dupes_across, out_no_dupes_across_manual)
+  expect_setequal(out_no_dupes_both, out_no_dupes_both_manual)
+})
+
 
 # acceptable formats for long-thin:
 # col01 val01 ... col99 val99 summarised_var distinct count sum
