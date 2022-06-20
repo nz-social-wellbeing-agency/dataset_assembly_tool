@@ -215,7 +215,10 @@ summarise_and_label <- function(df,
       dplyr::filter(!is.na(!!sym(summarise_col))) %>%
       dplyr::summarise(distinct = dplyr::n_distinct(!!sym(summarise_col)))
     
-    save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make distinct")
+    # output query if relevant
+    if("tbl_sql" %in% class(tmp_df)){
+      save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make distinct")
+    }
     
     output_df = tmp_df %>%
       dplyr::collect() %>%
@@ -226,7 +229,10 @@ summarise_and_label <- function(df,
     tmp_df = df %>%
       dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1), na.rm = TRUE))
     
-    save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make count")
+    # output query if relevant
+    if("tbl_sql" %in% class(tmp_df)){
+      save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make count")
+    }
     
     output_df = tmp_df %>%
       dplyr::collect() %>%
@@ -237,7 +243,10 @@ summarise_and_label <- function(df,
     tmp_df = df %>%
       dplyr::summarise(sum = sum(!!sym(summarise_col), na.rm = TRUE))
     
-    save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make sum")
+    # output query if relevant
+    if("tbl_sql" %in% class(tmp_df)){
+      save_to_sql(tmp_df %>% dbplyr::sql_render() %>% as.character(), "make sum")
+    }
     
     output_df = tmp_df %>%
       dplyr::collect() %>%
@@ -333,6 +342,9 @@ summarise_and_label_over_lists <- function(df,
   }
 
   #### conclude ----
+  
+  # lapply(input, function(x){mutate(x, across(starts_with("val"), as.character))})
+  
   # list of df's into a single df
   output_df = dplyr::bind_rows(output_list)
   
