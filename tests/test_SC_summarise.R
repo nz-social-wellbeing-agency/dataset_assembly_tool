@@ -381,3 +381,31 @@ test_that("input checks stop execution", {
   expect_error(summarise_and_label_over_lists(input_df, list("my_label", "not col"), summarise_list, TRUE, TRUE, TRUE, "none"), "column")
   expect_error(summarise_and_label_over_lists(input_df, group_by_list, list("rownum", "not col"), TRUE, TRUE, TRUE, "none"), "column")
 })
+
+test_that("different input types merge", {
+  input_df = tibble::tibble(
+    c1 = c("a","b","a","b"),
+    c2 = c(1.0, 1.0, 2.5, 2.5),
+    c3 = c(9, 8, 7, 6)
+  )
+  group_by_list = list("c1", "c2")
+  summarise_list = list("c3")
+  
+  expected_output = tibble::tibble(
+    col01 = c("c1", "c1", "c2", "c2"),
+    val01 = c("a", "b", "1", "2.5"),
+    summarised_var = c("c3", "c3", "c3", "c3"),
+    sum = c(16, 14, 17, 13)
+  )
+  
+  actual_output = summarise_and_label_over_lists(
+    df = input_df,
+    group_by_list = group_by_list,
+    summarise_list = summarise_list,
+    make_distinct = FALSE,
+    make_count = FALSE,
+    make_sum = TRUE
+  )
+  
+  expect_true(all_equal(actual_output, expected_output, ignore_row_order = TRUE, ignore_col_order = TRUE))
+})

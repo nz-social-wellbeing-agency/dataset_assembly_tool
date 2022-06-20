@@ -343,7 +343,8 @@ summarise_and_label_over_lists <- function(df,
 
   #### conclude ----
   
-  # lapply(input, function(x){mutate(x, across(starts_with("val"), as.character))})
+  # ensure all val columns are of type character
+  output_list = lapply(output_list, function(df){mutate(df, across(starts_with("val"), as.character))})
   
   # list of df's into a single df
   output_df = dplyr::bind_rows(output_list)
