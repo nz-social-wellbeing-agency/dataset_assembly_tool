@@ -190,7 +190,7 @@ test_that("individual summarise remove NA from groups", {
                             rownum = 1:100,
                             values = rep(c(0,0,NA,1,2), 20))
   expected_output_NA = tibble::tibble(col01 = rep("values", 4),
-                                      val01 = c(0,1,2,NA),
+                                      val01 = c("0","1","2",NA),
                                       summarised_var = rep("rownum", 4),
                                       sum = c(1960,1030,1050,1010))
   expected_output_none = dplyr::filter(expected_output_NA, !is.na(val01))
