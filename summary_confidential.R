@@ -213,7 +213,7 @@ summarise_and_label <- function(df,
   if(make_distinct){
     tmp_df = df %>%
       dplyr::filter(!is.na(!!sym(summarise_col))) %>%
-      dplyr::summarise(distinct = dplyr::n_distinct(!!sym(summarise_col)))
+      dplyr::summarise(distinct = dplyr::n_distinct(!!sym(summarise_col)), .groups = "drop")
     
     # output query if relevant
     if("tbl_sql" %in% class(tmp_df)){
@@ -227,7 +227,7 @@ summarise_and_label <- function(df,
   
   if(make_count){
     tmp_df = df %>%
-      dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1), na.rm = TRUE))
+      dplyr::summarise(count = sum(ifelse(is.na(!!sym(summarise_col)), 0, 1), na.rm = TRUE), .groups = "drop")
     
     # output query if relevant
     if("tbl_sql" %in% class(tmp_df)){
@@ -241,7 +241,7 @@ summarise_and_label <- function(df,
   
   if(make_sum){
     tmp_df = df %>%
-      dplyr::summarise(sum = sum(!!sym(summarise_col), na.rm = TRUE))
+      dplyr::summarise(sum = sum(!!sym(summarise_col), na.rm = TRUE), .groups = "drop")
     
     # output query if relevant
     if("tbl_sql" %in% class(tmp_df)){
