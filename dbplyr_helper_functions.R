@@ -508,33 +508,6 @@ create_table <- function(db_connection, db, schema, tbl_name, named_list_of_colu
   return(result)
 }
 
-## Delete all tables in the schema with the given prefix. -----------------------------------------
-#'
-#' For (sub)projects we favour a naming convention where using naming prefixes.
-#' E.g. prj_table1, prj_table2, prj_tmp_table3
-#' This function permits the deleting of all tables with common name prefix.
-#' Intended for use deleting temporary tables
-#' E.g. prefix = "tmp_" would delete tmp_table1, tmp_table2, tmp_tmp_table but not my_table
-#'
-#' Use with caution.
-#'
-purge_tables_by_prefix <- function(db_connection, db, schema, tbl_prefix, mode = "table", exclude = NA) {
-  assert(nchar(tbl_prefix) >= 2, "prefix of length <2 blocked to prevent accidental delete all")
-
-  # get all tables in database
-  all_tables <- DBI::dbListTables(db_connection)
-  # keep only with prefix
-  tables_to_drop <- all_tables[grepl(paste0("^", tbl_prefix), all_tables)]
-  # exclude if exists
-  if (!all(is.na(exclude))) {
-    tables_to_drop <- tables_to_drop[tables_to_drop %not_in% exclude]
-  }
-
-  for (tbl_name in tables_to_drop) {
-    delete_table(db_connection, db, schema, tbl_name, mode)
-  }
-}
-
 ## Save SQL queries to files ----------------------------------------------------------------------
 #'
 #' All the SQL queries that write or change data on the server (but not those that
