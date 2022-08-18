@@ -144,7 +144,7 @@ check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
   return(rounded_to_base)
 }
 
-## suppress small counts ------------------------------------------------------
+## check suppression of small counts ------------------------------------------
 #' 
 #' Returns TRUE if the provided column in the dataframe has no values where the
 #' count is less than the threshold.
@@ -152,7 +152,7 @@ check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
 #' We expect: suppressed_col = NA if count_col < threshold.
 #' Threshold is the smallest acceptable count.
 #'  
-check_suppression_of_small_counts <- function(df, suppressed_col, threshold, count_col = suppressed_col){
+check_small_count_suppression <- function(df, suppressed_col, threshold, count_col = suppressed_col){
   # df is a local dataframe
   assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
   df_classes = tolower(class(df))
@@ -308,13 +308,136 @@ expand_to_include_zero_counts <- function(df){
 
 ## confidentialise results ----------------------------------------------------
 #' 
+#' Runs and reports on random rounding, suppression, and handling of zeros
+#' using the most common defaults.
+#' 
 check_confidentialised_results <- function(df,
-                                    stable_RR = FALSE,
-                                    sum_RR = FALSE,
-                                    BASE = 3,
-                                    COUNT_THRESHOLD = 6,
-                                    SUM_THRESHOLD = 20){
+                                           BASE = 3,
+                                           COUNT_THRESHOLD = 6,
+                                           SUM_THRESHOLD = 20){
+  # df is a local dataframe in required format
+  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  df_classes = tolower(class(df))
+  assert(
+    !any(sapply(df_classes, grepl, pattern = "sql")),
+    "df must be a local dataset"
+  )
+  assert(has_long_thin_format(df), "output not long-thin formatted as expected")
+  assert(is.numeric(BASE), "BASE must be of type numeric")
+  assert(is.numeric(COUNT_THRESHOLD), "COUNT_THRESHOLD must be of type numeric")
+  assert(is.numeric(SUM_THRESHOLD), "SUM_THRESHOLD must be of type numeric")
   
-  assert(has_long_thin_format(df), msg)
+  # log for output
+  log = list(column = c(), check = c(), result = c())
+  # record log message
+  record_log = function(log, column, check, result){
+    log$column = c(log$column, column)
+    log$check = c(log$check, check)
+    log$result = c(log$result, result)
+    return(log)
+  }
+  
+  #### distinct ----------------------------------------
+  col = "conf_distinct"
+  
+  chk = glue::glue("checked for RR{BASE}")
+  log = record_log(log, col, chk, result = case_when(
+    any(c("raw_distinct", "conf_distinct") %not_in% colnames(df)) ~ "skipped",
+    check_random_rounding(df, "raw_distinct", "conf_distinct", BASE) ~ "passed",
+    TRUE ~ "failed"
+  ))
+  
+  chk = glue::glue("suppressed if raw < {COUNT_THRESHOLD}")
+  log = record_log(log, col, chk, result = case_when(
+    any(c("raw_distinct", "conf_distinct") %not_in% colnames(df)) ~ "skipped",
+    check_small_count_suppression(df, "conf_distinct", COUNT_THRESHOLD, "raw_distinct") ~ "passed",
+    TRUE ~ "failed"
+  ))
+  
+  #### count ----------------------------------------
+  col = "conf_count"
+  
+  chk = glue::glue("checked for RR{BASE}")
+  log = record_log(log, col, chk, result = case_when(
+    any(c("raw_count", "conf_count") %not_in% colnames(df)) ~ "skipped",
+    check_random_rounding(df, "raw_count", "conf_count", BASE) ~ "passed",
+    TRUE ~ "failed"
+  ))
+  
+  chk = glue::glue("suppressed if raw < {COUNT_THRESHOLD}")
+  log = record_log(log, col, chk, result = case_when(
+    any(c("raw_count", "conf_count") %not_in% colnames(df)) ~ "skipped",
+    check_small_count_suppression(df, "conf_count", COUNT_THRESHOLD, "raw_count") ~ "passed",
+    TRUE ~ "failed"
+  ))
+  
+  #### sum ----------------------------------------
+  col = "conf_sum"
+  
+  chk = glue::glue("suppressed if raw < {SUM_THRESHOLD}")
+  log = record_log(log, col, chk, result = case_when(
+    "conf_sum" %not_in% colnames(df) ~ "skipped",
+    all(c("raw_distinct", "raw_count") %not_in% colnames(df)) ~ "skipped",
+    any(
+      "raw_distinct" %in% colnames(df) && check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_distinct"),
+      "raw_count" %in% colnames(df) && check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_count")
+    ) ~ "passed",
+    TRUE ~ "failed"
+  ))
+  
+  #### zero counts ----------------------------------------
+  log = record_log(log, "all", "absence of zero counts", result = case_when(
+    "conf_count" %not_in% colnames(df) ~ "skipped",
+    check_absence_of_zero_counts(df, "conf_count", print_on_fail = FALSE) ~ "passed",
+    TRUE ~ "failed"
+  ))
+  
+  # convert log to formatted message - ensure alignment of checks
+  format_string = glue::glue("% {max(length(log_column))}s % {max(length(log_check))}s : %s")
+  msg = sprintf(format_string, log_column, log_check, toupper(log_result)) %>%
+    paste0(collapse = "\n")
+  
+  cat(msg)
+  return(msg)
+}
+
+## summarised output overview report ------------------------------------------
+#' 
+explore_output_report <- function(df, id_column = NA, target = NA, output_file = NA, output_dir = NA){
+  
+  
+  # TO DO
+  
+  
+  
+  # checks
+  assert(is.data.frame(df) | dplyr::is.tbl(df), "input [df] must be of type data.frame")
+  assert(is.na(id_column) || is.character(id_column), "input [id_column] must be provided as a string")
+  assert(is.na(target) || is.character(target), "input [target] must be provided as a string")
+  assert(is.na(output_file) || is.character(output_file), "input [output_file] must be provided as a string")
+  assert(is.na(output_dir) || is.character(output_dir), "input [output_dir] must be provided as a string")
+  assert(is.na(target) || target %in% colnames(df), "[target] is not a column name of [df]")
+  
+  # filter
+  df = filter_to_limited_number_of_rows(df = df, row_limit = 10000, id_column = id_column)
+  
+  # handle NAs
+  clean_time = format(Sys.time(), "%Y-%m-%d %H%M%S")
+  output_dir = ifelse(is.na(output_dir), getwd(), output_dir)
+  output_file = ifelse(is.na(output_file), "df explored", output_file)
+  output_file = paste(clean_time, output_file)
+  
+  # explore
+  if(is.na(target)){
+    sink("tmp")
+    on.exit(sink())
+    explore::report(data = df, output_file = output_file, output_dir = output_dir)
+  } else {
+    sink("tmp")
+    on.exit(sink())
+    explore::report(data = df, target = !!sym(target), output_file = output_file, output_dir = output_dir)
+  }
+  unlink("tmp")
+  return(paste0(output_file,".html"))
   
 }
