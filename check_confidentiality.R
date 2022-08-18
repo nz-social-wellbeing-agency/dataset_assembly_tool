@@ -92,10 +92,10 @@ check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
     "df must be a local dataset"
   )
   # columns are part of df
-  assert(is.character(raw_col) | is.na(raw_col), "raw column must be of type character")
-  assert(raw_col %in% colnames(df) | is.na(raw_col), "raw column is not a column name of df")
-  assert(is.character(conf_col), "conf column must be of type character")
-  assert(conf_col %in% colnames(df), "conf column is not a column name of df")
+  assert(is.character(raw_col) | is.na(raw_col), "raw_col must be of type character")
+  assert(raw_col %in% colnames(df) | is.na(raw_col), "raw_col is not a column name of df")
+  assert(is.character(conf_col), "conf_col must be of type character")
+  assert(conf_col %in% colnames(df), "conf_col is not a column name of df")
   
   # check rounding
   rounded_to_base = check_rounding_to_base_df(df, conf_col, base = base)
@@ -145,16 +145,165 @@ check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
 }
 
 ## suppress small counts ------------------------------------------------------
-#'
-check_suppression_of_small_counts <- function(df, suppress_cols, threshold, count_cols = suppress_cols){
+#' 
+#' Returns TRUE if the provided column in the dataframe has no values where the
+#' count is less than the threshold.
+#' 
+#' We expect: suppressed_col = NA if count_col < threshold.
+#' Threshold is the smallest acceptable count.
+#'  
+check_suppression_of_small_counts <- function(df, suppressed_col, threshold, count_col = suppressed_col){
+  # df is a local dataframe
+  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  df_classes = tolower(class(df))
+  assert(
+    !any(sapply(df_classes, grepl, pattern = "sql")),
+    "df must be a local dataset"
+  )
+  # columns are part of df
+  assert(is.character(suppressed_col), "suppressed_col must be of type character")
+  assert(suppressed_col %in% colnames(df), "suppressed_col is not a column name of df")
+  assert(is.character(count_col), "count_col must be of type character")
+  assert(count_col %in% colnames(df), "count_col is not a column name of df")
+  # numeric threshold
+  assert(is.numeric(threshold), "threshold must be of type numeric")
+  
+  # check suppression
+  suppression_required = df[[count_col]] < threshold
+  suppressed_vals = df[[suppressed_col]][suppression_required]
+  return(all(is.na(suppressed_vals)))
 }
 
-## check for absence of zero counts
-#'
-check_absence_of_zero_counts <- function(df){
+## check for absence of zero counts -------------------------------------------
+#' 
+#' If small non-zero counts are suppressed and zero counts do not appear in the
+#' dataset, then there is a confidentiality risk that true zeros could be
+#' recovered because they are handled differently from small non-zero counts.
+#' 
+#' Returns TRUE if the absence of zero counts does not pose a confidentiality
+#' risk - either there are no suppressed counts OR all combinations of
+#' labels/groups appear in the dataset.
+#' 
+#' As a summarised dataset may be produced by appending multiple summaries
+#' we run the analysis within each combination.
+#' 
+#' If print_on_fail = TRUE then at least one combination that is absent from
+#' the dataset is printed.
+#' 
+#' If a risk is identified (function returns FALSE), there are
+#' two common solutions:
+#'   1) remove all rows that contain suppression of small non-zero counts
+#'   2) use expand_to_include_zero_counts to add zero count rows into dataset
+#' 
+check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = TRUE){
+  # df is a local dataframe in required format
+  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  df_classes = tolower(class(df))
+  assert(
+    !any(sapply(df_classes, grepl, pattern = "sql")),
+    "df must be a local dataset"
+  )
+  assert(has_long_thin_format(df), "output not long-thin formatted as expected")
+  # columns are part of df
+  assert(is.character(conf_count_col), "conf_count_col must be of type character")
+  assert(conf_count_col %in% colnames(df), "conf_count_col is not a column name of df")
+  assert(is.logical(print_on_fail))
   
-  has_long_thin_format(df)
+  # column groups
+  col00 = grepl("^col[0-9][0-9]$", column_names)
+  val00 = grepl("^val[0-9][0-9]$", column_names)
+  summary_var = grepl("^summarised_var$", column_names)
+  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", column_names)
   
+  # all sub-summaries with the df
+  subsummaries = df %>%
+    select(all_of(c(col00, summary_var))) %>%
+    distinct()
+  
+  # iterate through all sub-summaries
+  for(ii in 1:nrow(subsummaries)){
+    # create sub-summary dataset
+    this_subsummary = df %>%
+      dplyr::semi_join(subsummaries[ii,], by = c(col00, summary_var))
+    
+    # if no NA values then there are no concerns - go to next sub-summary
+    if(!any(is.na(this_subsummary[[conf_count_col]]))){ next }
+    
+    # create comparison with all rows
+    all_row_df = this_subsummary %>%
+      tidyr::expand(!!!syms(c(col00,val00, summary_var)))
+    # combinations missing from current sub-summary
+    missing_rows = all_row_df %>%
+      dplyr::anti_join(this_subsummary, by = c(col00,val00, summary_var))
+    
+    # if any values missing
+    if(nrow(missing_rows) != 0){
+      if(print_on_fail){ print(head(missing_rows)) }
+      return(FALSE)
+    }
+  }
+  
+  # we have checked all sub-summaries and found no concerns
+  return(TRUE)
+}
+
+## expand to include zero counts ----------------------------------------------
+#' 
+#' If small non-zero counts are suppressed and zero counts do not appear in the
+#' dataset, then there is a confidentiality risk that true zeros could be
+#' recovered because they are handled differently from small non-zero counts.
+#' 
+#' Where a risk is identified (by check_absence_of_zero_counts), there are
+#' two common solutions:
+#'   1) remove all rows that contain suppression of small non-zero counts
+#'   2) use expand_to_include_zero_counts to add zero count rows into dataset
+#' 
+#' As a summarised dataset may be produced by appending multiple summaries
+#' we expand within each combination.
+#' 
+expand_to_include_zero_counts <- function(df){
+  # df is a local dataframe in required format
+  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  df_classes = tolower(class(df))
+  assert(
+    !any(sapply(df_classes, grepl, pattern = "sql")),
+    "df must be a local dataset"
+  )
+  assert(has_long_thin_format(df), "output not long-thin formatted as expected")
+  
+  # column groups
+  col00 = grepl("^col[0-9][0-9]$", column_names)
+  val00 = grepl("^val[0-9][0-9]$", column_names)
+  summary_var = grepl("^summarised_var$", column_names)
+  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", column_names)
+  
+  col_order = colnames(df)
+  
+  # all sub-summaries with the df
+  subsummaries = df %>%
+    select(all_of(c(col00, summary_var))) %>%
+    distinct()
+  
+  expanded_rows_list = lapply(
+    1:nrow(subsummaries),
+    function(ii){
+      # create sub-summary dataset
+      this_subsummary = df %>%
+        dplyr::semi_join(subsummaries[ii,], by = c(col00, summary_var))
+      
+      # create comparison with all rows
+      all_row_df = this_subsummary %>%
+        tidyr::expand(!!!syms(c(col00,val00, summary_var)))
+      # sub-summary with all combinations included
+      expanded_rows = this_subsummary %>%
+        right_join(all_row_df, by = c(col00,val00, summary_var))
+    }
+  )
+  
+  expanded_rows_list %>%
+    dplyr::bind_rows()
+    select(all_of(col_order)) %>%
+    return()
 }
 
 ## confidentialise results ----------------------------------------------------
