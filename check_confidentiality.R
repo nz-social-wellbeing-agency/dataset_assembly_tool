@@ -403,41 +403,84 @@ check_confidentialised_results <- function(df,
 
 ## summarised output overview report ------------------------------------------
 #' 
-explore_output_report <- function(df, id_column = NA, target = NA, output_file = NA, output_dir = NA){
+explore_output_report <- function(df, output_dir = NA){
+  # df is a local dataframe in required format
+  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  df_classes = tolower(class(df))
+  assert(
+    !any(sapply(df_classes, grepl, pattern = "sql")),
+    "df must be a local dataset"
+  )
+  assert(has_long_thin_format(df), "output not long-thin formatted as expected")
   
+  # column groups
+  col00 = grepl("^col[0-9][0-9]$", column_names)
+  val00 = grepl("^val[0-9][0-9]$", column_names)
+  summary_var = grepl("^summarised_var$", column_names)
+  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", column_names)
   
-  # TO DO
-  
-  
-  
-  # checks
-  assert(is.data.frame(df) | dplyr::is.tbl(df), "input [df] must be of type data.frame")
-  assert(is.na(id_column) || is.character(id_column), "input [id_column] must be provided as a string")
-  assert(is.na(target) || is.character(target), "input [target] must be provided as a string")
-  assert(is.na(output_file) || is.character(output_file), "input [output_file] must be provided as a string")
-  assert(is.na(output_dir) || is.character(output_dir), "input [output_dir] must be provided as a string")
-  assert(is.na(target) || target %in% colnames(df), "[target] is not a column name of [df]")
-  
-  # filter
-  df = filter_to_limited_number_of_rows(df = df, row_limit = 10000, id_column = id_column)
-  
-  # handle NAs
-  clean_time = format(Sys.time(), "%Y-%m-%d %H%M%S")
-  output_dir = ifelse(is.na(output_dir), getwd(), output_dir)
-  output_file = ifelse(is.na(output_file), "df explored", output_file)
-  output_file = paste(clean_time, output_file)
-  
-  # explore
-  if(is.na(target)){
-    sink("tmp")
-    on.exit(sink())
-    explore::report(data = df, output_file = output_file, output_dir = output_dir)
-  } else {
-    sink("tmp")
-    on.exit(sink())
-    explore::report(data = df, target = !!sym(target), output_file = output_file, output_dir = output_dir)
+  #### count ----------------------------------------
+  if("conf_count" %in% colnames(df)){
+    
+    count_list = lapply(
+      1:length(col00),
+      function(ii){
+        # set up iteration key columns
+        this_col = col00[ii]
+        this_val = val00[ii]
+        # set up mutate
+        unique_col = unique(df[[this_col]])
+        mutate_formula = glue::glue("ifelse(col == '{unique_col}', total_count, NA)")
+        mutate_list = as.list(rlang::exprs(mutate_formula))
+        names(mutate_list) = unique_col
+        
+        df %>%
+          group_by(!!!syms(c(col00, this_val, "summary_var"))) %>%
+          summarise(total_count = sum(conf_count), .groups = "drop") %>%
+          select(col = !!sym(this_col), val = !!sym(this_val), "total_count") %>%
+          mutate(!!! mutate_list) %>%
+          select(-col, -total_count) %>%
+          return()
+      }
+    )
+    
+    count_list = bind_rows(count_list)
+    # to do here (1) incorporate summary_var, (2) more efficient if pivot is moved out
+    explore_report(count_list, target = "val", output_file = "review_count", output_dir = output_dir)
   }
-  unlink("tmp")
-  return(paste0(output_file,".html"))
+  
+  ## distinct ----------------------------------------
+  if("conf_distinct" %in% colnames(df)){
+    
+    unique_col = unique(df$summarised_var)
+    mutate_formula = glue::glue("ifelse(col == '{unique_col}', conf_distinct, NA)")
+    mutate_list = as.list(rlang::exprs(mutate_formula))
+    names(mutate_list) = unique_col
+    
+    distinct_df = df %>%
+      select(col = summarised_var, conf_distinct) %>%
+      mutate(!!! mutate_list) %>%
+      select(-col, -conf_distinct)
+    # to do - standard code for this across all three sub-sections
+    
+    explore_report(count_list, output_file = "review_distinct", output_dir = output_dir)
+  }
+  
+  ## sum ----------------------------------------
+  if(all(c("conf_count", "conf_sum") %in% colnames(df))){
+    
+    unique_col = unique(df$summarised_var)
+    mutate_formula = glue::glue("ifelse(col == '{unique_col}', avg, NA)")
+    mutate_list = as.list(rlang::exprs(mutate_formula))
+    names(mutate_list) = unique_col
+    
+    sum_df = df %>%
+      mutate(avg = conf_sum / conf_count) %>%
+      select(col = summarised_var, avg) %>%
+      mutate(!!! mutate_list) %>%
+      select(-col, -avg)
+    
+    explore_report(count_list, output_file = "review_averages", output_dir = output_dir)
+  }
   
 }
