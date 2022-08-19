@@ -403,6 +403,15 @@ check_confidentialised_results <- function(df,
 
 ## summarised output overview report ------------------------------------------
 #' 
+#' Generate overview reports of summarised dataset for research review.
+#' Visual inspection of these reports is expected to be part of checks run
+#' during delivery.
+#' 
+#' Note that NA values output in these reports are not reliable. In order to
+#' make use of existing reporting functions, we arrange the dataset in a sparse
+#' format. The consequence of using a sparse format is that NA we can not
+#' distinguish between true NA and formatting NA values.
+#' 
 explore_output_report <- function(df, output_dir = NA){
   # df is a local dataframe in required format
   assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
