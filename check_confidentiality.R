@@ -423,10 +423,13 @@ explore_output_report <- function(df, output_dir = NA){
   assert(has_long_thin_format(df), "output not long-thin formatted as expected")
   
   # column groups
-  col00 = grepl("^col[0-9][0-9]$", column_names)
-  val00 = grepl("^val[0-9][0-9]$", column_names)
-  summary_var = grepl("^summarised_var$", column_names)
-  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", column_names)
+  col00 = grepl("^col[0-9][0-9]$", colnames(df))
+  val00 = grepl("^val[0-9][0-9]$", colnames(df))
+  summary_var = grepl("^summarised_var$", colnames(df))
+  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", colnames(df))
+  
+  col00 = colnames(df)[col00]
+  val00 = colnames(df)[val00]
   
   #### count ----------------------------------------
   if("conf_count" %in% colnames(df)){
@@ -440,21 +443,22 @@ explore_output_report <- function(df, output_dir = NA){
         # set up mutate
         unique_col = unique(df[[this_col]])
         mutate_formula = glue::glue("ifelse(col == '{unique_col}', total_count, NA)")
-        mutate_list = as.list(rlang::exprs(mutate_formula))
+        mutate_list = as.list(rlang::parse_exprs(mutate_formula))
         names(mutate_list) = unique_col
         
         df %>%
-          group_by(!!!syms(c(col00, this_val, "summary_var"))) %>%
+          group_by(!!!syms(c(col00, this_val, "summarised_var"))) %>%
           summarise(total_count = sum(conf_count), .groups = "drop") %>%
           select(col = !!sym(this_col), val = !!sym(this_val), "total_count") %>%
           mutate(!!! mutate_list) %>%
           select(-col, -total_count) %>%
+          mutate(val = as.character(val)) %>%
           return()
       }
     )
     
     count_list = bind_rows(count_list)
-    # to do here (1) incorporate summary_var, (2) more efficient if pivot is moved out
+    # to do here (1) incorporate summarised_var, (2) more efficient if pivot is moved out
     explore_report(count_list, target = "val", output_file = "review_count", output_dir = output_dir)
   }
   
@@ -463,7 +467,7 @@ explore_output_report <- function(df, output_dir = NA){
     
     unique_col = unique(df$summarised_var)
     mutate_formula = glue::glue("ifelse(col == '{unique_col}', conf_distinct, NA)")
-    mutate_list = as.list(rlang::exprs(mutate_formula))
+    mutate_list = as.list(rlang::parse_exprs(mutate_formula))
     names(mutate_list) = unique_col
     
     distinct_df = df %>%
@@ -472,7 +476,7 @@ explore_output_report <- function(df, output_dir = NA){
       select(-col, -conf_distinct)
     # to do - standard code for this across all three sub-sections
     
-    explore_report(count_list, output_file = "review_distinct", output_dir = output_dir)
+    explore_report(distinct_df, output_file = "review_distinct", output_dir = output_dir)
   }
   
   ## sum ----------------------------------------
@@ -480,16 +484,20 @@ explore_output_report <- function(df, output_dir = NA){
     
     unique_col = unique(df$summarised_var)
     mutate_formula = glue::glue("ifelse(col == '{unique_col}', avg, NA)")
-    mutate_list = as.list(rlang::exprs(mutate_formula))
+    mutate_list = as.list(rlang::parse_exprs(mutate_formula))
     names(mutate_list) = unique_col
     
     sum_df = df %>%
-      mutate(avg = conf_sum / conf_count) %>%
+      mutate(
+        conf_sum = as.numeric(conf_sum),
+        conf_count = as.numeric(conf_count),
+        avg = conf_sum / conf_count
+        ) %>%
       select(col = summarised_var, avg) %>%
       mutate(!!! mutate_list) %>%
       select(-col, -avg)
     
-    explore_report(count_list, output_file = "review_averages", output_dir = output_dir)
+    explore_report(sum_df, output_file = "review_averages", output_dir = output_dir)
   }
   
 }
