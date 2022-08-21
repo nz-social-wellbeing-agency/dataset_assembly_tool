@@ -26,6 +26,7 @@
 #' the specified base.
 #' 
 #' If na.rm = TRUE (default) then ignores missing (NA) values.
+#' Else returns FALSE.
 #' Warns if all values are missing (NA)
 #' Errors on non-numeric input.
 #' 
@@ -35,14 +36,16 @@ check_rounding_to_base_array <- function(input_array, base = 3, na.rm = TRUE){
   # require input array has length
   assert(length(input_array) > 0, "no input values")
   # check numeric
-  assert(all(is.numeric(input_array), na.rm = TRUE), "input is non-numeric")
+  assert(all(is.numeric(input_array) | is.logical(input_array), na.rm = TRUE), "input is non-numeric")
   
   # warn if only NA's
   if(length(input_array) == sum(is.na(input_array))){
     warning("all input values are NA")
   }
   
-  return(all(input_array %% base == 0, na.rm = na.rm))
+  result = all(input_array %% base == 0, na.rm = na.rm)
+  
+  return(ifelse(is.na(result), FALSE, result))
 }
 
 ## check rounded to specified base (dataframe) --------------------------------
@@ -56,7 +59,7 @@ check_rounding_to_base_array <- function(input_array, base = 3, na.rm = TRUE){
 #' 
 check_rounding_to_base_df <- function(df, column, base = 3, na.rm = TRUE){
   # df is a dataframe
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   # df is a local dataset (not remote)
   df_classes = tolower(class(df))
   assert(
@@ -85,7 +88,7 @@ check_rounding_to_base_df <- function(df, column, base = 3, na.rm = TRUE){
 #' 
 check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
   # df is a local dataframe
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
   assert(
     !any(sapply(df_classes, grepl, pattern = "sql")),
@@ -154,7 +157,7 @@ check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
 #'  
 check_small_count_suppression <- function(df, suppressed_col, threshold, count_col = suppressed_col){
   # df is a local dataframe
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
   assert(
     !any(sapply(df_classes, grepl, pattern = "sql")),
@@ -197,7 +200,7 @@ check_small_count_suppression <- function(df, suppressed_col, threshold, count_c
 #' 
 check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = TRUE){
   # df is a local dataframe in required format
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
   assert(
     !any(sapply(df_classes, grepl, pattern = "sql")),
@@ -263,7 +266,7 @@ check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = TRU
 #' 
 expand_to_include_zero_counts <- function(df){
   # df is a local dataframe in required format
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
   assert(
     !any(sapply(df_classes, grepl, pattern = "sql")),
@@ -316,7 +319,7 @@ check_confidentialised_results <- function(df,
                                            COUNT_THRESHOLD = 6,
                                            SUM_THRESHOLD = 20){
   # df is a local dataframe in required format
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
   assert(
     !any(sapply(df_classes, grepl, pattern = "sql")),
@@ -414,7 +417,7 @@ check_confidentialised_results <- function(df,
 #' 
 explore_output_report <- function(df, output_dir = NA){
   # df is a local dataframe in required format
-  assert(is.tbl(df) | is.data.frame(df), "df is not dataset")
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
   assert(
     !any(sapply(df_classes, grepl, pattern = "sql")),
