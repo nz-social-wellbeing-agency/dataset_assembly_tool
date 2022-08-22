@@ -252,8 +252,92 @@ test_that("small count suppression error when expected", {
   expect_error(check_small_count_suppression(input_df, "conf_count", "6", count_col = "raw_count"), "numeric")
 })
 
+#####################################################################
+test_that("absence of zeroes pass & fail when expected", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("euro","maori","asian","euro","maori","asian","north","north","north","south","south","south","west","west","west","east","east","east"),
+    col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
+    summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
+    conf_count = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30)
+  )
+  
+  # no NAs
+  expect_true(check_absence_of_zero_counts(input_df, conf_count_col = "conf_count"))
+  
+  for(ii in 1:nrow(input_df)){
+    tmp_df = dplyr::filter(input_df, dplyr::row_number() != ii)
+    expect_true(check_absence_of_zero_counts(tmp_df, conf_count_col = "conf_count"))
+  }
 
+  # with NAs
+  input_df$conf_count[1:2] = NA
+  expect_true(check_absence_of_zero_counts(input_df, conf_count_col = "conf_count"))
+  
+  for(ii in 1:nrow(input_df)){
+    tmp_df = dplyr::filter(input_df, dplyr::row_number() != ii)
+    if(ii %in% 1:6){
+      expect_false(check_absence_of_zero_counts(tmp_df, conf_count_col = "conf_count"))
+    } else {
+      expect_true(check_absence_of_zero_counts(tmp_df, conf_count_col = "conf_count"))
+    }
+  }
+  
+  # with NAs 2
+  input_df$conf_count[15:16] = NA
+  expect_true(check_absence_of_zero_counts(input_df, conf_count_col = "conf_count"))
+  
+  for(ii in 1:nrow(input_df)){
+    tmp_df = dplyr::filter(input_df, dplyr::row_number() != ii)
+    expect_false(check_absence_of_zero_counts(tmp_df, conf_count_col = "conf_count"))
+  }
+})
 
+test_that("absence of zeroes errors when expected", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("euro","maori","asian","euro","maori","asian","north","north","north","south","south","south","west","west","west","east","east","east"),
+    col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
+    summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
+    conf_count = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30)
+  )
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  alt_df = dplyr::rename(input_df, wrong_col_name = col01)
+  
+  # act & assert
+  expect_error(check_absence_of_zero_counts("input_df", conf_count_col = "conf_count"), "dataset")
+  expect_error(check_absence_of_zero_counts(remote_df, conf_count_col = "conf_count"), "local")
+  expect_error(check_absence_of_zero_counts(alt_df, conf_count_col = "conf_count"), "long-thin")
+  expect_error(check_absence_of_zero_counts(input_df, conf_count_col = 4), "character")
+  expect_error(check_absence_of_zero_counts(input_df, conf_count_col = "conf_count_x"), "column name")
+  expect_error(check_absence_of_zero_counts(input_df, conf_count_col = "conf_count", print_on_fail = "TRUE"), "logical")
+})
 
 #####################################################################
+test_that("", {
+  
+})
 
+test_that("", {
+  
+})
+
+#####################################################################
+test_that("", {
+  
+})
+
+test_that("", {
+  
+})
+
+
+
+#' check_absence_of_zero_counts(df, conf_count_col, print_on_fail = TRUE)
+#' expand_to_include_zero_counts(df)
+#' check_confidentialised_results(df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+#' explore_output_report(df, output_dir = NA)

@@ -205,7 +205,7 @@ check_small_count_suppression <- function(df, suppressed_col, threshold, count_c
 #'   1) remove all rows that contain suppression of small non-zero counts
 #'   2) use expand_to_include_zero_counts to add zero count rows into dataset
 #' 
-check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = TRUE){
+check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = FALSE){
   # df is a local dataframe in required format
   assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
@@ -217,18 +217,18 @@ check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = TRU
   # columns are part of df
   assert(is.character(conf_count_col), "conf_count_col must be of type character")
   assert(conf_count_col %in% colnames(df), "conf_count_col is not a column name of df")
-  assert(is.logical(print_on_fail))
+  assert(is.logical(print_on_fail), "print_on_fail must be of type logical")
   
+  column_names = colnames(df)
   # column groups
-  col00 = grepl("^col[0-9][0-9]$", column_names)
-  val00 = grepl("^val[0-9][0-9]$", column_names)
-  summary_var = grepl("^summarised_var$", column_names)
-  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", column_names)
+  col00 = column_names[grepl("^col[0-9][0-9]$", column_names)]
+  val00 = column_names[grepl("^val[0-9][0-9]$", column_names)]
+  summary_var = "summarised_var"
   
   # all sub-summaries with the df
   subsummaries = df %>%
-    select(all_of(c(col00, summary_var))) %>%
-    distinct()
+    dplyr::select(all_of(c(col00, summary_var))) %>%
+    dplyr::distinct()
   
   # iterate through all sub-summaries
   for(ii in 1:nrow(subsummaries)){
