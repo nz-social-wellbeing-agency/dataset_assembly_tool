@@ -387,7 +387,14 @@ apply_random_rounding <- function(df, RR_columns, BASE = 3, stable_across_cols =
       df = dplyr::mutate(df, !!sym(conf_col) := randomly_round_vector(!!sym(raw_col), base = BASE))
     } else {
       # make seeds
-      df = dplyr::mutate(df, tmp_concatenated = paste(!!!syms(stable_across_cols)))
+      sort_remove_nas = function(x){
+        x = unname(x[!is.na(x)])
+        return(paste(sort(x), collapse = " "))
+      }
+      concated = dplyr::select(df, dplyr::all_of(stable_across_cols)) %>%
+        apply(MARGIN = 1, sort_remove_nas)
+      
+      df$tmp_concatenated = concated
       df$tmp_hashed = sapply(df$tmp_concatenated, digest::digest)  
       df = dplyr::mutate(df, tmp_seed = digest::digest2int(tmp_hashed))
       # round

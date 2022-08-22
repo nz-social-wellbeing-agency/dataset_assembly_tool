@@ -122,6 +122,31 @@ test_that("rounding can be stable", {
   expect_true(all_equal(output_df_s3, output_df_s4))
 })
 
+test_that("stable rounding is independent of column order", {
+  # arrange
+  input_df1 = data.frame(label1 = rep(c("a","b"), 50),
+                         label2 = c(rep("z",50), rep("y",50)),
+                         count = 2 + 1:100)
+  input_df2 = data.frame(label1 = c(rep("z",50), rep("y",50)),
+                         label2 = rep(c("a","b"), 50),
+                         count = 2 + 1:100)
+  # act
+  output1 = apply_random_rounding(input_df1, "count", stable_across_cols = c("label1", "label2"))
+  output2 = apply_random_rounding(input_df1, "count", stable_across_cols = c("label2", "label1"))
+  output3 = apply_random_rounding(input_df2, "count", stable_across_cols = c("label1", "label2"))
+  output4 = apply_random_rounding(input_df2, "count", stable_across_cols = c("label2", "label1"))
+  # force consistent colnames
+  output3 = dplyr::rename(output3, label1 = label2, label2 = label1)
+  output4 = dplyr::rename(output4, label1 = label2, label2 = label1)
+  
+  # assert
+  expect_true(all_equal(output1, output2))
+  expect_true(all_equal(output3, output4))
+  expect_true(all_equal(output1, output3))
+  expect_true(all_equal(output2, output4))
+})
+
+
 test_that("input checks stop execution", {
   input_df = data.frame(label1 = rep(c("a","b"), 50),
                         label2 = c(rep("z",50), rep("y",50)),
@@ -536,7 +561,7 @@ test_that("input checks stop execution", {
                         sum = 10 + 1:100)
   poor_input_df = dplyr::select(input_df, -distinct, -count)
   # expect_error(summarise_and_label("input_df", "your_label", "rownum", TRUE, TRUE, TRUE, "none"), "data\\.frame")
-
+  
   expect_error(confidentialise_results("input_df", stable_RR = FALSE, sum_RR = FALSE), "data\\.frame")
   expect_error(confidentialise_results(poor_input_df, stable_RR = FALSE, sum_RR = FALSE), "column distinct")
   expect_error(confidentialise_results(input_df, stable_RR = "FALSE", sum_RR = FALSE), "logical")
