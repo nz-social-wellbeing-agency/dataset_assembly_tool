@@ -206,4 +206,54 @@ test_that("random rounding checks warn & error when expected", {
 })
 
 #####################################################################
+test_that("small count suppression pass & fail when expected", {
+  # arrange
+  input_df = data.frame(
+    raw_count = 1:30,
+    conf_count = c(rep_len(NA, 5), 6:30),
+    conf_sum = c(rep_len(NA, 19), 20:30 * 100)
+  )
+  
+  # act & assert
+  expect_true(check_small_count_suppression(input_df, "conf_count", 6, count_col = "raw_count"))
+  expect_true(check_small_count_suppression(input_df, "conf_count", 6))
+  expect_true(check_small_count_suppression(input_df, "conf_count", 4, count_col = "raw_count"))
+  expect_true(check_small_count_suppression(input_df, "conf_count", 4))
+  expect_true(check_small_count_suppression(input_df, "conf_sum", 20, count_col = "raw_count"))
+  expect_true(check_small_count_suppression(input_df, "conf_sum", 20, count_col = "conf_count"))
+  expect_true(check_small_count_suppression(input_df, "conf_sum", 15, count_col = "raw_count"))
+  expect_true(check_small_count_suppression(input_df, "conf_sum", 15, count_col = "conf_count"))
+  
+  expect_false(check_small_count_suppression(input_df, "conf_count", 8, count_col = "raw_count"))
+  expect_false(check_small_count_suppression(input_df, "conf_count", 8))
+  expect_false(check_small_count_suppression(input_df, "conf_sum", 22, count_col = "raw_count"))
+  expect_false(check_small_count_suppression(input_df, "conf_sum", 22, count_col = "conf_count"))
+  expect_false(check_small_count_suppression(input_df, "raw_count", 6, count_col = "conf_count"))
+})
+
+test_that("small count suppression error when expected", {
+  # arrange
+  input_df = data.frame(
+    raw_count = 1:30,
+    conf_count = c(rep_len(NA, 5), 6:30),
+    conf_sum = c(rep_len(NA, 19), 20:30 * 100)
+  )
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  
+  
+  check_small_count_suppression(input_df, "conf_count", 6, count_col = "raw_count")
+  
+  expect_error(check_small_count_suppression("input_df", "conf_count", 6, count_col = "raw_count"), "dataset")
+  expect_error(check_small_count_suppression(remote_df, "conf_count", 6, count_col = "raw_count"), "local")
+  expect_error(check_small_count_suppression(input_df, NA, 6, count_col = "raw_count"), "character")
+  expect_error(check_small_count_suppression(input_df, "conf_count", 6, count_col = 4), "character")
+  expect_error(check_small_count_suppression(input_df, "conf_count_x", 6, count_col = "raw_count"), "column name")
+  expect_error(check_small_count_suppression(input_df, "conf_count", 6, count_col = "raw_count_x"), "column name")
+  expect_error(check_small_count_suppression(input_df, "conf_count", "6", count_col = "raw_count"), "numeric")
+})
+
+
+
+
+#####################################################################
 

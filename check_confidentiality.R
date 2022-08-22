@@ -179,6 +179,7 @@ check_small_count_suppression <- function(df, suppressed_col, threshold, count_c
   
   # check suppression
   suppression_required = df[[count_col]] < threshold
+  suppression_required = ifelse(is.na(suppression_required), TRUE, suppression_required)
   suppressed_vals = df[[suppressed_col]][suppression_required]
   return(all(is.na(suppressed_vals)))
 }
