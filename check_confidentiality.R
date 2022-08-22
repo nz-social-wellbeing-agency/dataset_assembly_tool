@@ -351,63 +351,62 @@ check_confidentialised_results <- function(df,
   col = "conf_distinct"
   
   chk = glue::glue("checked for RR{BASE}")
-  log = record_log(log, col, chk, result = case_when(
-    any(c("raw_distinct", "conf_distinct") %not_in% colnames(df)) ~ "skipped",
-    check_random_rounding(df, "raw_distinct", "conf_distinct", BASE) ~ "passed",
-    TRUE ~ "failed"
-  ))
+  result = tryCatch(
+    ifelse(check_random_rounding(df, "raw_distinct", "conf_distinct", BASE), "pass", "fail"),
+    error = function(e){ return("skip") }
+  )
+  log = record_log(log, col, chk, result)
   
   chk = glue::glue("suppressed if raw < {COUNT_THRESHOLD}")
-  log = record_log(log, col, chk, result = case_when(
-    any(c("raw_distinct", "conf_distinct") %not_in% colnames(df)) ~ "skipped",
-    check_small_count_suppression(df, "conf_distinct", COUNT_THRESHOLD, "raw_distinct") ~ "passed",
-    TRUE ~ "failed"
-  ))
-  
+  result = tryCatch(
+    ifelse(check_small_count_suppression(df, "conf_distinct", COUNT_THRESHOLD, "raw_distinct"), "pass", "fail"),
+    error = function(e){ return("skip") }
+  )
+  log = record_log(log, col, chk, result)
+
   #### count ----------------------------------------
   col = "conf_count"
   
   chk = glue::glue("checked for RR{BASE}")
-  log = record_log(log, col, chk, result = case_when(
-    any(c("raw_count", "conf_count") %not_in% colnames(df)) ~ "skipped",
-    check_random_rounding(df, "raw_count", "conf_count", BASE) ~ "passed",
-    TRUE ~ "failed"
-  ))
-  
+  result = tryCatch(
+    ifelse(check_random_rounding(df, "raw_count", "conf_count", BASE), "pass", "fail"),
+    error = function(e){ return("skip") }
+  )
+  log = record_log(log, col, chk, result)
+
   chk = glue::glue("suppressed if raw < {COUNT_THRESHOLD}")
-  log = record_log(log, col, chk, result = case_when(
-    any(c("raw_count", "conf_count") %not_in% colnames(df)) ~ "skipped",
-    check_small_count_suppression(df, "conf_count", COUNT_THRESHOLD, "raw_count") ~ "passed",
-    TRUE ~ "failed"
-  ))
-  
+  result = tryCatch(
+    ifelse(check_small_count_suppression(df, "conf_count", COUNT_THRESHOLD, "raw_count"), "pass", "fail"),
+    error = function(e){ return("skip") }
+  )
+  log = record_log(log, col, chk, result)
+
   #### sum ----------------------------------------
   col = "conf_sum"
   
   chk = glue::glue("suppressed if raw < {SUM_THRESHOLD}")
-  log = record_log(log, col, chk, result = case_when(
-    "conf_sum" %not_in% colnames(df) ~ "skipped",
-    all(c("raw_distinct", "raw_count") %not_in% colnames(df)) ~ "skipped",
-    any(
-      "raw_distinct" %in% colnames(df) && check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_distinct"),
-      "raw_count" %in% colnames(df) && check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_count")
-    ) ~ "passed",
-    TRUE ~ "failed"
-  ))
-  
+  result = tryCatch(
+    ifelse(
+      check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_distinct") |
+        check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_count"), "pass", "fail"
+    ),
+    error = function(e){ return("skip") }
+  )
+  log = record_log(log, col, chk, result)
+
   #### zero counts ----------------------------------------
-  log = record_log(log, "all", "absence of zero counts", result = case_when(
-    "conf_count" %not_in% colnames(df) ~ "skipped",
-    check_absence_of_zero_counts(df, "conf_count", print_on_fail = FALSE) ~ "passed",
-    TRUE ~ "failed"
-  ))
   
+  result = tryCatch(
+    ifelse(check_absence_of_zero_counts(df, "conf_count", print_on_fail = FALSE), "pass", "fail"),
+    error = function(e){ return("skip") }
+  )
+  log = record_log(log, "all", "absence of zero counts", result)
+
   # convert log to formatted message - ensure alignment of checks
-  format_string = glue::glue("% {max(length(log_column))}s % {max(length(log_check))}s : %s")
-  msg = sprintf(format_string, log_column, log_check, toupper(log_result)) %>%
+  format_string = glue::glue("%{max(nchar(log$column))}s %{max(nchar(log$check))}s : %s")
+  msg = sprintf(format_string, log$column, log$check, toupper(log$result)) %>%
     paste0(collapse = "\n")
   
-  cat(msg)
   return(msg)
 }
 

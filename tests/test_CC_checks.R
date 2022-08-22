@@ -23,7 +23,7 @@
 #' check_rounding_to_base_df(df, column, base = 3, na.rm = TRUE)
 #' check_random_rounding(df, raw_col = NA, conf_col, base = 3)
 #' check_small_count_suppression(df, suppressed_col, threshold, count_col = suppressed_col)
-#' check_absence_of_zero_counts(df, conf_count_col, print_on_fail = TRUE)
+#' check_absence_of_zero_counts(df, conf_count_col, print_on_fail = FALSE)
 #' expand_to_include_zero_counts(df)
 #' check_confidentialised_results(df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
 #' explore_output_report(df, output_dir = NA)
@@ -31,6 +31,8 @@
 context("check confidentiality - checks")
 
 #####################################################################
+# check_rounding_to_base_array(input_array, base = 3, na.rm = TRUE)
+
 test_that("rounding vector passes & fails when expected", {
   # arrange
   vec3 = (1:14) * 3
@@ -82,6 +84,8 @@ test_that("rounding vector errors when expected", {
 })
 
 #####################################################################
+# check_rounding_to_base_df(df, column, base = 3, na.rm = TRUE)
+
 test_that("rounding df passes & failed when expected", {
   # arrange
   input_df = data.frame(
@@ -132,6 +136,8 @@ test_that("rounding df errors when expected", {
 })
 
 #####################################################################
+# check_random_rounding(df, raw_col = NA, conf_col, base = 3)
+
 test_that("random rounding checks pass & fail when expected", {
   # arrange
   input_df = data.frame(
@@ -206,6 +212,8 @@ test_that("random rounding checks warn & error when expected", {
 })
 
 #####################################################################
+# check_small_count_suppression(df, suppressed_col, threshold, count_col = suppressed_col)
+
 test_that("small count suppression pass & fail when expected", {
   # arrange
   input_df = data.frame(
@@ -253,6 +261,8 @@ test_that("small count suppression error when expected", {
 })
 
 #####################################################################
+# check_absence_of_zero_counts(df, conf_count_col, print_on_fail = FALSE)
+
 test_that("absence of zeroes pass & fail when expected", {
   # arrange
   input_df = data.frame(
@@ -318,6 +328,8 @@ test_that("absence of zeroes errors when expected", {
 })
 
 #####################################################################
+# expand_to_include_zero_counts(df)
+
 test_that("expand to include zeroes creates expected output", {
   # arrange
   input_df = data.frame(
@@ -385,7 +397,26 @@ test_that("expand to include zeroes errors when expected", {
 })
 
 #####################################################################
+# check_confidentialised_results(df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+
 test_that("", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("euro","maori","asian","euro","maori","asian","north","north","north","south","south","south","west","west","west","east","east","east"),
+    col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
+    summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
+    raw_distinct = c(3,4,5,6,7,8,9,10,11,3,4,5,6,7,8,9,10,11),
+    conf_distinct = c(3,3,6,6,9,9,9,9,12,3,3,6,6,6,9,9,9,9),
+    raw_count = c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20),
+    conf_count = c(3,3,6,6,9,6,9,9,12,12,15,15,15,15,18,18,18,21),
+    raw_sum = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30),
+    conf_sum = c(NA,NA,NA,42,72,75,81,36,57,NA,NA,NA,72,33,75,63,90,30)
+  )
+  
+  
+  
   
 })
 
@@ -393,7 +424,12 @@ test_that("", {
   
 })
 
+#####################################################################
+# explore_output_report(df, output_dir = NA)
+test_that("", {
+  
+})
 
-
-#' check_confidentialised_results(df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
-#' explore_output_report(df, output_dir = NA)
+test_that("", {
+  
+})
