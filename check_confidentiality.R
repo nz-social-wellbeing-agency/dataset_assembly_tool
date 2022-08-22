@@ -86,7 +86,7 @@ check_rounding_to_base_df <- function(df, column, base = 3, na.rm = TRUE){
 #' - Warns if rounding does not appear to be random.
 #' - Warns if difference between raw and rounded columns is too large.
 #' 
-check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
+check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3, print_ratios = FALSE){
   # df is a local dataframe
   assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
@@ -109,39 +109,45 @@ check_random_rounding <- function(df, raw_col = NA, conf_col, base = 3){
     return(rounded_to_base)
   }
   
-  rounding_diff = df[[raw_col]] - df[[conf_col]]
+  rounding_diff = df[[conf_col]] - df[[raw_col]]
   rounding_diff = rounding_diff[!is.na(rounding_diff)]
+  rounding_diff = rounding_diff[rounding_diff != 0]
   
   # warn if difference is too large for rounding
-  if(max(abs(rounding_diff)) > base){
+  if(any(abs(rounding_diff) >= base)){
     warning("rounding not random - difference exceeds the base")
+    return(rounded_to_base)
   }
   
   # warn if all rounding up or all rounding down
   if(all(rounding_diff >= 0)){
     warning("rounding not random - all values rounded up")
+    return(rounded_to_base)
   }
   if(all(rounding_diff <= 0)){
     warning("rounding not random - all values rounded down")
+    return(rounded_to_base)
   }
   
   # table of ratios of each difference amount
-  diff_df = data.frame(rounding = 0:(base - 1)) %>%
-    dplyr::mutate(actual = table(abs(rounding_diff))) %>%
-    dplyr::mutate(actual = case_when(
-      rounding == 0 ~ actual / length(rounding_diff),
-      TRUE ~ actual / length(rounding_diff[rounding_diff != 0])
-    )) %>%
-    dplyr::mutate(expected = case_when(
-      rounding == 0 ~ 1 / base,
-      TRUE ~ (base - rounding) / ((base - 1) * base / 2)
-    )) %>%
-    mutate(ratio = actual / expected)
+  
+  diff_df = data.frame(round_by = 1:(base - 1))
+  diff_df$count = sapply(
+    diff_df$round_by,
+    function(x){ sum(abs(rounding_diff) == x) }
+  )
+  diff_df$actual_perc = diff_df$count / length(rounding_diff)
+  diff_df$expect_perc = (base - diff_df$round_by) / ((base - 1) * base / 2)
+  diff_df$ratio = diff_df$actual_perc / diff_df$expect_perc
+  
   # warn if distribution of rounding is not expected pattern
   # allows a 20% variation
-  if(!all(1 - 0.2 < diff_df$ratio & diff_df$ratio < 1+ 0.2)){
-    print(diff_df)
+  # ignores cases where fewer than 5 observations
+  if(!all(diff_df$count < 5 | (1 - 0.2 <= diff_df$ratio & diff_df$ratio <= 1 + 0.2))){
     warning("rounding not random - actual proportions differ from expected by too much")
+  }
+  if(print_ratios){
+    print(diff_df)
   }
   
   return(rounded_to_base)

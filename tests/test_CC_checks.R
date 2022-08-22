@@ -134,12 +134,76 @@ test_that("rounding df errors when expected", {
 #####################################################################
 test_that("random rounding checks pass & fail when expected", {
   # arrange
+  input_df = data.frame(
+    raw = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22),
+    round_down = c(0,0,3,3,3,6,6,6,9,9,9,12,12,12,15,15,15,18,18,18,21,21),
+    round_up = c(3,3,6,6,6,9,9,9,12,12,12,15,15,15,18,18,18,21,21,21,24,24),
+    round_closest = c(0,3,3,3,6,6,6,9,9,9,12,12,12,15,15,15,18,18,18,21,21,21),
+    round_furthest = c(3,0,3,6,3,6,9,6,9,12,9,12,15,12,15,18,15,18,21,18,21,24),
+    round_random1 = c(3,3,3,3,6,6,6,9,9,12,12,12,12,15,15,18,18,18,21,18,21,21),
+    round_random2 = c(0,0,3,3,3,6,6,6,9,12,12,12,12,12,15,15,18,18,18,21,21,21),
+    round_random3 = c(3,3,3,3,6,6,9,9,9,9,9,12,12,15,15,15,18,18,18,18,21,21)
+  )
   
+  # act & assert
+  expect_true(check_random_rounding(input_df, "raw", "round_random1", base = 3))
+  expect_true(check_random_rounding(input_df, "raw", "round_random2", base = 3))
+  expect_true(check_random_rounding(input_df, "raw", "round_random3", base = 3))
+  expect_false(check_random_rounding(input_df, "round_random1", "raw", base = 3))
   
-  # check_random_rounding(df, raw_col = NA, conf_col, base = 3)
+  defaultW <- getOption("warn") 
+  options(warn = -1) 
+  
+  expect_true(check_random_rounding(input_df, "raw", "round_down", base = 3))
+  expect_true(check_random_rounding(input_df, "raw", "round_up", base = 3))
+  expect_true(check_random_rounding(input_df, "raw", "round_closest", base = 3))
+  expect_true(check_random_rounding(input_df, "raw", "round_furthest", base = 3))
+  
+  expect_false(check_random_rounding(input_df, "raw", "raw", base = 3))
+  
+  expect_true(check_random_rounding(input_df, conf_col = "round_random1", base = 3))
+  expect_true(check_random_rounding(input_df, conf_col = "round_random2", base = 3))
+  expect_true(check_random_rounding(input_df, conf_col = "round_random3", base = 3))
+  expect_true(check_random_rounding(input_df, conf_col = "round_down", base = 3))
+  expect_true(check_random_rounding(input_df, conf_col = "round_up", base = 3))
+  expect_true(check_random_rounding(input_df, conf_col = "round_closest", base = 3))
+  expect_true(check_random_rounding(input_df, conf_col = "round_furthest", base = 3))
+  
+  expect_false(check_random_rounding(input_df, conf_col = "raw", base = 3))
+  
+  options(warn = defaultW)
 })
 
-
+test_that("random rounding checks warn & error when expected", {
+  # arrange
+  input_df = data.frame(
+    raw = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22),
+    round_down = c(0,0,3,3,3,6,6,6,9,9,9,12,12,12,15,15,15,18,18,18,21,21),
+    round_up = c(3,3,3,6,6,6,9,9,9,12,12,12,15,15,15,18,18,18,21,21,21,24),
+    round_closest = c(0,3,3,3,6,6,6,9,9,9,12,12,12,15,15,15,18,18,18,21,21,21),
+    round_furthest = c(3,0,3,6,3,6,9,6,9,12,9,12,15,12,15,18,15,18,21,18,21,24),
+    round_random1 = c(3,3,3,3,6,6,6,9,9,12,12,12,12,15,15,18,18,18,21,18,21,21),
+    round_random2 = c(0,0,3,3,3,6,6,6,9,12,12,12,12,12,15,15,18,18,18,21,21,21),
+    round_random3 = c(3,3,3,3,6,6,9,9,9,9,9,12,12,15,15,15,18,18,18,18,21,21)
+  )
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  
+  # act & assert
+  expect_error(check_random_rounding("input_df", "raw", "round_random1", base = 3), "dataset")
+  expect_error(check_random_rounding(remote_df, "raw", "round_random1", base = 3), "local")
+  expect_error(check_random_rounding(input_df, 2, "round_random1", base = 3), "character")
+  expect_error(check_random_rounding(input_df, "raw_x", "round_random1", base = 3), "column name")
+  expect_error(check_random_rounding(input_df, "raw", NA, base = 3), "character")
+  expect_error(check_random_rounding(input_df, "raw", "round_random1_x", base = 3), "column name")
+  
+  expect_warning(check_random_rounding(input_df, conf_col = "round_random1", base = 3), "raw column")
+  expect_warning(check_random_rounding(input_df, "round_down", "round_up", base = 3), "difference exceeds")
+  expect_warning(check_random_rounding(input_df, "raw", "round_up", base = 3), "rounded up")
+  expect_warning(check_random_rounding(input_df, "raw", "round_down", base = 3), "rounded down")
+  
+  expect_warning(check_random_rounding(input_df, "raw", "round_closest", base = 3), "not random")
+  expect_warning(check_random_rounding(input_df, "raw", "round_furthest", base = 3), "not random")
+})
 
 #####################################################################
 
