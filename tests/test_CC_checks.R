@@ -118,7 +118,7 @@ test_that("rounding df passes & failed when expected", {
 test_that("rounding df errors when expected", {
   input_df = data.frame(rr3 = 3 * 1:5, rrx = 6:10, rr3na = c(3,6,3,9,NA), nas = c(NA, NA, NA, NA, NA))
   remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
-
+  
   expect_error(check_rounding_to_base_df("input_df", "rr3", base = 3, na.rm = FALSE), "dataset")
   expect_error(check_rounding_to_base_df(remote_df, "rr3", base = 3, na.rm = FALSE), "local")
   expect_error(check_rounding_to_base_df(input_df, 2, base = 3, na.rm = FALSE), "character")
@@ -271,7 +271,7 @@ test_that("absence of zeroes pass & fail when expected", {
     tmp_df = dplyr::filter(input_df, dplyr::row_number() != ii)
     expect_true(check_absence_of_zero_counts(tmp_df, conf_count_col = "conf_count"))
   }
-
+  
   # with NAs
   input_df$conf_count[1:2] = NA
   expect_true(check_absence_of_zero_counts(input_df, conf_count_col = "conf_count"))
@@ -318,12 +318,70 @@ test_that("absence of zeroes errors when expected", {
 })
 
 #####################################################################
-test_that("", {
+test_that("expand to include zeroes creates expected output", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("euro","maori","asian","euro","maori","asian","north","north","north","south","south","south","west","west","west","east","east","east"),
+    col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
+    summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
+    conf_count = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30)
+  )
   
+  # complete dataset is unchanged
+  output_df = expand_to_include_zero_counts(input_df)
+  expect_true(all_equal(input_df, output_df, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE))
+  
+  # missing rows added back in
+  for(ii in 1:nrow(input_df)){
+    expected_output = input_df
+    expected_output$conf_count[ii] = NA
+    
+    tmp_input = dplyr::filter(expected_output, !is.na(conf_count))
+    
+    tmp_output = expand_to_include_zero_counts(tmp_input)
+    expect_true(all_equal(expected_output, tmp_output, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE))
+  }
+  
+  # missing pairs of rows
+  for(ii in 1:2){
+    for(jj in 4:nrow(input_df)){
+      expected_output = input_df
+      expected_output$conf_count[ii] = NA
+      expected_output$conf_count[jj] = NA
+      
+      tmp_input = dplyr::filter(expected_output, !is.na(conf_count))
+
+      tmp_output = expand_to_include_zero_counts(tmp_input)
+      
+      expect_true(
+        # either we match the expected output
+        all_equal(expected_output, tmp_output, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE) == TRUE
+        # or input = output because we do not need to add any rows
+        | all_equal(tmp_input, tmp_output, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE) == TRUE
+      )
+    }
+  }
 })
 
-test_that("", {
+test_that("expand to include zeroes errors when expected", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("euro","maori","asian","euro","maori","asian","north","north","north","south","south","south","west","west","west","east","east","east"),
+    col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
+    summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
+    conf_count = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30)
+  )
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  alt_df = dplyr::rename(input_df, wrong_col_name = col01)
   
+  # act & assert
+  expect_error(expand_to_include_zero_counts("input_df"), "dataset")
+  expect_error(expand_to_include_zero_counts(remote_df), "local")
+  expect_error(expand_to_include_zero_counts(alt_df), "long-thin")
 })
 
 #####################################################################
@@ -337,7 +395,5 @@ test_that("", {
 
 
 
-#' check_absence_of_zero_counts(df, conf_count_col, print_on_fail = TRUE)
-#' expand_to_include_zero_counts(df)
 #' check_confidentialised_results(df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
 #' explore_output_report(df, output_dir = NA)

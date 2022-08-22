@@ -281,18 +281,18 @@ expand_to_include_zero_counts <- function(df){
   )
   assert(has_long_thin_format(df), "output not long-thin formatted as expected")
   
+  column_names = colnames(df)
   # column groups
-  col00 = grepl("^col[0-9][0-9]$", column_names)
-  val00 = grepl("^val[0-9][0-9]$", column_names)
-  summary_var = grepl("^summarised_var$", column_names)
-  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", column_names)
+  col00 = column_names[grepl("^col[0-9][0-9]$", column_names)]
+  val00 = column_names[grepl("^val[0-9][0-9]$", column_names)]
+  summary_var = "summarised_var"
   
   col_order = colnames(df)
   
   # all sub-summaries with the df
   subsummaries = df %>%
-    select(all_of(c(col00, summary_var))) %>%
-    distinct()
+    dplyr::select(dplyr::all_of(c(col00, summary_var))) %>%
+    dplyr::distinct()
   
   expanded_rows_list = lapply(
     1:nrow(subsummaries),
@@ -311,8 +311,8 @@ expand_to_include_zero_counts <- function(df){
   )
   
   expanded_rows_list %>%
-    dplyr::bind_rows()
-    select(all_of(col_order)) %>%
+    dplyr::bind_rows() %>%
+    dplyr::select(dplyr::all_of(col_order)) %>%
     return()
 }
 
