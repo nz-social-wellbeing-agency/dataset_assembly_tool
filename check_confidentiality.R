@@ -404,8 +404,7 @@ check_confidentialised_results <- function(df,
 
   # convert log to formatted message - ensure alignment of checks
   format_string = glue::glue("%{max(nchar(log$column))}s %{max(nchar(log$check))}s : %s")
-  msg = sprintf(format_string, log$column, log$check, toupper(log$result)) %>%
-    paste0(collapse = "\n")
+  msg = sprintf(format_string, log$column, log$check, toupper(log$result))
   
   return(msg)
 }

@@ -407,21 +407,116 @@ test_that("", {
     col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
     val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
     summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
-    raw_distinct = c(3,4,5,6,7,8,9,10,11,3,4,5,6,7,8,9,10,11),
-    conf_distinct = c(3,3,6,6,9,9,9,9,12,3,3,6,6,6,9,9,9,9),
-    raw_count = c(3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20),
-    conf_count = c(3,3,6,6,9,6,9,9,12,12,15,15,15,15,18,18,18,21),
-    raw_sum = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30),
-    conf_sum = c(NA,NA,NA,42,72,75,81,36,57,NA,NA,NA,72,33,75,63,90,30)
+    raw_distinct  = c( 3, 4, 5, 5, 7, 8, 9,10,11,13,14,45,46,47,48,49,50,51),
+    conf_distinct = c(NA,NA,NA,NA, 9, 9, 9, 9,12,15,12,45,45,48,48,48,51,51),
+    raw_count     = c( 3, 4, 5, 6, 7, 8, 9,10,11,22,23,54,55,56,57,58,59,60),
+    conf_count    = c(NA,NA,NA, 6, 9, 6, 9, 9,12,21,24,54,57,54,57,57,60,60),
+    raw_sum       = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30),
+    conf_sum      = c(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,30,72,33,75,63,90,30)
   )
   
   
+  # act & arrange - all pass
+  msg = check_confidentialised_results(input_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_distinct\\s+checked for RR[0-9]+ : PASS")
+  expect_output(print(msg), "conf_distinct\\s+suppressed if raw < [0-9]+ : PASS")
+  expect_output(print(msg), "conf_count\\s+checked for RR[0-9]+ : PASS")
+  expect_output(print(msg), "conf_count\\s+suppressed if raw < [0-9]+ : PASS")
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : PASS")
+  expect_output(print(msg), "all\\s+absence of zero counts : PASS")
   
+  # act & arrange - fail distinct
+  tmp_df = input_df
+  tmp_df$conf_distinct = tmp_df$raw_distinct
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_distinct\\s+checked for RR[0-9]+ : FAIL")
+  expect_output(print(msg), "conf_distinct\\s+suppressed if raw < [0-9]+ : FAIL")
   
+  # act & arrange - skip distinct
+  tmp_df = input_df
+  tmp_df$raw_distinct = NULL
+  tmp_df$conf_distinct = NULL
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_distinct\\s+checked for RR[0-9]+ : SKIP")
+  expect_output(print(msg), "conf_distinct\\s+suppressed if raw < [0-9]+ : SKIP")
+  
+  # act & arrange - fail count
+  tmp_df = input_df
+  tmp_df$conf_count = tmp_df$raw_count
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_count\\s+checked for RR[0-9]+ : FAIL")
+  expect_output(print(msg), "conf_count\\s+suppressed if raw < [0-9]+ : FAIL")
+  
+  # act & arrange - skip count
+  tmp_df = input_df
+  tmp_df$conf_count = NULL
+  tmp_df$raw_count = NULL
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_count\\s+checked for RR[0-9]+ : SKIP")
+  expect_output(print(msg), "conf_count\\s+suppressed if raw < [0-9]+ : SKIP")
+  
+  # act & arrange - fail sum
+  tmp_df = input_df
+  tmp_df$conf_sum = tmp_df$raw_sum
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : FAIL")
+  
+  # act & arrange - skip sum
+  tmp_df = input_df
+  tmp_df$conf_sum = NULL
+  tmp_df$raw_sum = NULL
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : SKIP")
+  
+  # act & arrange - fail zeros
+  tmp_df = input_df[2:13,]
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "all\\s+absence of zero counts : FAIL")
+  
+  # act & arrange - skip zeros
+  tmp_df = input_df
+  tmp_df$conf_count = NULL
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "all\\s+absence of zero counts : SKIP")
+  
+  # act & arrange - parameters change
+  msg = check_confidentialised_results(input_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "RR3")
+  expect_output(print(msg), "conf_count\\s+suppressed if raw < 6")
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < 20")
+  
+  msg = check_confidentialised_results(input_df, BASE = 2, COUNT_THRESHOLD = 8, SUM_THRESHOLD = 76)
+  expect_output(print(msg), "RR2")
+  expect_output(print(msg), "conf_count\\s+suppressed if raw < 8")
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < 76")
 })
 
 test_that("", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("euro","maori","asian","euro","maori","asian","north","north","north","south","south","south","west","west","west","east","east","east"),
+    col02 = c("sex","sex","sex","sex","sex","sex","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("1","1","1","2","2","2","euro","maori","asian","euro","maori","asian","euro","maori","asian","euro","maori","asian"),
+    summarised_var = c("x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x","x"),
+    raw_distinct  = c( 3, 4, 5, 5, 7, 8, 9,10,11,13,14,45,46,47,48,49,50,51),
+    conf_distinct = c(NA,NA,NA,NA, 9, 9, 9, 9,12,15,12,45,45,48,48,48,51,51),
+    raw_count     = c( 3, 4, 5, 6, 7, 8, 9,10,11,22,23,54,55,56,57,58,59,60),
+    conf_count    = c(NA,NA,NA, 6, 9, 6, 9, 9,12,21,24,54,57,54,57,57,60,60),
+    raw_sum       = c(66,57,60,42,72,75,81,36,57,84,57,30,72,33,75,63,90,30),
+    conf_sum      = c(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,30,72,33,75,63,90,30)
+  )
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  alt_df = dplyr::rename(input_df, wrong_col_name = col01)
   
+  # act & assert
+  expect_error(check_confidentialised_results("input_df"), "dataset")
+  expect_error(check_confidentialised_results(remote_df), "local")
+  expect_error(check_confidentialised_results(alt_df), "long-thin")
+  
+  expect_error(check_confidentialised_results(input_df, BASE = "3"), "numeric")
+  expect_error(check_confidentialised_results(input_df, COUNT_THRESHOLD = "6"), "numeric")
+  expect_error(check_confidentialised_results(input_df, SUM_THRESHOLD = "20"), "numeric")
 })
 
 #####################################################################
