@@ -17,6 +17,8 @@
 #' Issues:
 #'
 #' History (reverse order):
+#' 2022-08-23 SA stable RR3 handles column order
+#' 2022-05-20 SA cross product improved
 #' 2021-08-18 SA v0
 #' ############################################################################
 
@@ -33,7 +35,7 @@
 #' Note: dplyr::group_by requires no duplicates so turning this off
 #' may produce errors if the output is used for summarising results.
 #' 
-#' drop.dupes.across control whether duplicate sets of paramters are discarded.
+#' drop.dupes.across control whether duplicate sets of parameters are discarded.
 #' For example: (a,b,c) and (a,c,b) will only output (a,b,c)
 #' 
 #' For example: always = (a,b,c), grp1 = (d,e), grp2 = (f,g)
@@ -505,7 +507,10 @@ confidentialise_results <- function(df,
       count_col = dplyr::sym(count_cols[ii])
       num_col = dplyr::sym(num_cols[ii])
       
+      # if raw >= threshold and conf < threshold, enforce rounding down so conf >= threshold
       df = dplyr::mutate(df, !!num_col := ifelse(!!num_col < SUM_THRESHOLD & !!count_col >= SUM_THRESHOLD, !!num_col + BASE, !!num_col))
+      # if raw < threshold and conf >= threshold, enforce rounding down so conf < threshold
+      df = dplyr::mutate(df, !!num_col := ifelse(!!num_col >= SUM_THRESHOLD & !!count_col < SUM_THRESHOLD, !!num_col - BASE, !!num_col))
     }
   }
   

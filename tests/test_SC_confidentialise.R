@@ -389,12 +389,21 @@ test_that("threshold difference handled", {
                         distinct = rep(20, 100),
                         count = rep(20, 100),
                         sum = 10 + 1:100)
-  # act
+  # act - round up
   output_df = confidentialise_results(input_df, stable_RR = FALSE, sum_RR = FALSE)
   # assert
   expect_true(all(output_df$conf_distinct == 21))
   expect_true(all(output_df$conf_count == 21))
   expect_true(all(output_df$raw_sum == output_df$conf_sum))
+  
+  # act - round down
+  input_df$distinct = 19
+  input_df$count = 19
+  output_df = confidentialise_results(input_df, stable_RR = FALSE, sum_RR = FALSE)
+  # assert
+  expect_true(all(output_df$conf_distinct == 18))
+  expect_true(all(output_df$conf_count == 18))
+  expect_true(all(is.na(output_df$conf_sum)))
 })
 
 test_that("options for random rounding respected", {
