@@ -424,6 +424,17 @@ test_that("checking conf results returns correct messages", {
   expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : PASS")
   expect_output(print(msg), "all\\s+absence of zero counts : PASS")
   
+  # act & arrange - pass conf_sum with only one check column
+  tmp_df = input_df
+  tmp_df$raw_count = NULL
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : PASS")
+  
+  tmp_df = input_df
+  tmp_df$raw_distinct = NULL
+  msg = check_confidentialised_results(tmp_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
+  expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : PASS")
+  
   # suppress warnings as warning are tested for elsewhere
   defaultW <- getOption("warn") 
   options(warn = -1) 

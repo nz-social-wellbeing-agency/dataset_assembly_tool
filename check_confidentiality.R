@@ -385,13 +385,21 @@ check_confidentialised_results <- function(df,
   col = "conf_sum"
   
   chk = glue::glue("suppressed if raw < {SUM_THRESHOLD}")
-  result = tryCatch(
-    ifelse(
-      check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_distinct") |
-        check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_count"), "pass", "fail"
-    ),
+  r1 = tryCatch(
+    ifelse(check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_distinct"), "pass", "fail"),
     error = function(e){ return("skip") }
   )
+  r2 = tryCatch(
+    ifelse(check_small_count_suppression(df, "conf_sum", SUM_THRESHOLD, "raw_count"), "pass", "fail"),
+    error = function(e){ return("skip") }
+  )
+  
+  result = dplyr::case_when(
+    r1 == "fail" | r2 == "fail" ~ "fail",
+    r1 == "skip" & r2 == "skip" ~ "skip",
+    r1 == "pass" | r2 == "pass" ~ "pass"
+  )
+    
   log = record_log(log, col, chk, result)
 
   #### zero counts ----------------------------------------
