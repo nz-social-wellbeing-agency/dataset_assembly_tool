@@ -364,7 +364,7 @@ test_that("expand to include zeroes creates expected output", {
       expected_output$conf_count[jj] = NA
       
       tmp_input = dplyr::filter(expected_output, !is.na(conf_count))
-
+      
       tmp_output = expand_to_include_zero_counts(tmp_input)
       
       expect_true(
@@ -399,7 +399,7 @@ test_that("expand to include zeroes errors when expected", {
 #####################################################################
 # check_confidentialised_results(df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
 
-test_that("", {
+test_that("checking conf results returns correct messages", {
   # arrange
   input_df = data.frame(
     col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
@@ -415,7 +415,6 @@ test_that("", {
     conf_sum      = c(NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,30,72,33,75,63,90,30)
   )
   
-  
   # act & arrange - all pass
   msg = check_confidentialised_results(input_df, BASE = 3, COUNT_THRESHOLD = 6, SUM_THRESHOLD = 20)
   expect_output(print(msg), "conf_distinct\\s+checked for RR[0-9]+ : PASS")
@@ -424,6 +423,10 @@ test_that("", {
   expect_output(print(msg), "conf_count\\s+suppressed if raw < [0-9]+ : PASS")
   expect_output(print(msg), "conf_sum\\s+suppressed if raw < [0-9]+ : PASS")
   expect_output(print(msg), "all\\s+absence of zero counts : PASS")
+  
+  # suppress warnings as warning are tested for elsewhere
+  defaultW <- getOption("warn") 
+  options(warn = -1) 
   
   # act & arrange - fail distinct
   tmp_df = input_df
@@ -489,9 +492,12 @@ test_that("", {
   expect_output(print(msg), "RR2")
   expect_output(print(msg), "conf_count\\s+suppressed if raw < 8")
   expect_output(print(msg), "conf_sum\\s+suppressed if raw < 76")
+  
+  # reactive warnings
+  options(warn = defaultW)
 })
 
-test_that("", {
+test_that("checking conf results errors when expected", {
   # arrange
   input_df = data.frame(
     col01 = c("eth","eth","eth","eth","eth","eth","region","region","region","region","region","region","region","region","region","region","region","region"),
@@ -520,11 +526,119 @@ test_that("", {
 })
 
 #####################################################################
-# explore_output_report(df, output_dir = NA)
-test_that("", {
+# explore_output_report(df, output_dir = NA, output_label = NA)
+
+test_that("output reports are produced", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("sex","sex","sex","sex","sex","sex","sex","sex","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("1","1","1","1","2","2","2","2","north","south","west","east","north","south","west","east","north","south","west","east"),
+    col02 = c("region","region","region","region","region","region","region","region","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("north","south","west","east","north","south","west","east","aa","aa","aa","aa","bb","bb","bb","bb","cc","cc","cc","cc"),
+    summarised_var = c("assets","assets","assets","assets","assets","assets","assets","assets","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs"),
+    conf_distinct = c(1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,9,10,11,12),
+    conf_count = c(57,73,53,66,95,60,80,98,41,67,47,30,76,36,70,73,77,63,74,29),
+    conf_sum = c(948,1455,462,1302,228,1125,847,357,912,322,319,828,1062,1128,1440,790,585,456,1100,256)
+  )
   
+  # act
+  output_files = explore_output_report(input_df, output_dir = NA, output_label = "tmp")
+  # file names
+  files_wout_paths = regmatches(output_files, regexpr("/20[0-9][0-9].+output report.+\\.csv$", output_files))
+  files_wout_paths = substr(files_wout_paths, 2, nchar(files_wout_paths))
+  
+  # assert
+  expect_true(all(files_wout_paths %in% list.files()))
+  
+  # tidy
+  unlink(output_files)
+  unlink(files_wout_paths)
 })
 
-test_that("", {
+test_that("output reports match calculated values", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("sex","sex","sex","sex","sex","sex","sex","sex","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("1","1","1","1","2","2","2","2","north","south","west","east","north","south","west","east","north","south","west","east"),
+    col02 = c("region","region","region","region","region","region","region","region","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("north","south","west","east","north","south","west","east","aa","aa","aa","aa","bb","bb","bb","bb","cc","cc","cc","cc"),
+    summarised_var = c("assets","assets","assets","assets","assets","assets","assets","assets","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs"),
+    conf_distinct = c(1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,9,10,11,12),
+    conf_count = c(57,73,53,66,95,60,80,98,41,67,47,30,76,36,70,73,77,63,74,29),
+    conf_sum = c(948,1455,462,1302,228,1125,847,357,912,322,319,828,1062,1128,1440,790,585,456,1100,256)
+  )
+  output_count_df = data.frame(
+    col = c("sex","sex","region","region","region","region","eth","eth","eth"),
+    val = c("1","2","north","south","west","east","aa","bb","cc"),
+    num_count = c(1,1,2,2,2,2,1,1,1),
+    mean_count = c(249,333,173,149.5,162,148,185,255,243),
+    min_count = c(249,333,152,133,133,132,185,255,243),
+    lower_quartile_count = c(249,333,162.5,141.25,147.5,140,185,255,243),
+    median_count = c(249,333,173,149.5,162,148,185,255,243),
+    upper_quartile_count = c(249,333,183.5,157.75,176.5,156,185,255,243),
+    max_count = c(249,333,194,166,191,164,185,255,243)
+  )
+  output_distinct_df = data.frame(
+    summarised_var = c("assets","liabs"),
+    num_distinct = c(8,12),
+    mean_distinct = c(4.5,6.5),
+    min_distinct = c(1,1),
+    lower_quartile_distinct = c(2.75,3.75),
+    median_distinct = c(4.5,6.5),
+    upper_quartile_distinct = c(6.25,9.25),
+    max_distinct = c(8,12)
+  )
+  output_sum_df = data.frame(
+    summarised_var = c("assets","liabs"),
+    num_avg = c(8,12),
+    mean_avg = c(12.5,14.7),
+    min_avg = c(2.4,4.8),
+    lower_quartile_avg = c(7.4,7.5),
+    median_avg = c(13.6,12.4),
+    upper_quartile_avg = c(19,21),
+    max_avg = c(19.9,31.3)
+  )
   
+  # act
+  output_files = explore_output_report(input_df, output_dir = NA, output_label = "tmp")
+  # file names
+  files_wout_paths = regmatches(output_files, regexpr("/20[0-9][0-9].+output report.+\\.csv$", output_files))
+  files_wout_paths = substr(files_wout_paths, 2, nchar(files_wout_paths))
+  # read back in
+  actual_count_df = read.csv(files_wout_paths[1])
+  actual_distinct_df = read.csv(files_wout_paths[2])
+  actual_sum_df = read.csv(files_wout_paths[3])
+  # round to 1dp
+  actual_sum_df = actual_sum_df %>%
+    dplyr::mutate(dplyr::across(where(is.numeric), round, digits = 1))
+  
+  # assert
+  expect_true(all_equal(output_count_df, actual_count_df, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE))
+  expect_true(all_equal(output_distinct_df, actual_distinct_df, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE))
+  expect_true(all_equal(output_sum_df, actual_sum_df, ignore_row_order = TRUE, ignore_col_order = TRUE, convert = TRUE))
+  
+  # tidy
+  unlink(output_files)
+  unlink(files_wout_paths)
+})
+
+test_that("output reports errors when expected", {
+  # arrange
+  input_df = data.frame(
+    col01 = c("sex","sex","sex","sex","sex","sex","sex","sex","region","region","region","region","region","region","region","region","region","region","region","region"),
+    val01 = c("1","1","1","1","2","2","2","2","north","south","west","east","north","south","west","east","north","south","west","east"),
+    col02 = c("region","region","region","region","region","region","region","region","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth","eth"),
+    val02 = c("north","south","west","east","north","south","west","east","aa","aa","aa","aa","bb","bb","bb","bb","cc","cc","cc","cc"),
+    summarised_var = c("assets","assets","assets","assets","assets","assets","assets","assets","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs","liabs"),
+    conf_distinct = c(1,2,3,4,5,6,7,8,1,2,3,4,5,6,7,8,9,10,11,12),
+    conf_count = c(57,73,53,66,95,60,80,98,41,67,47,30,76,36,70,73,77,63,74,29),
+    conf_sum = c(948,1455,462,1302,228,1125,847,357,912,322,319,828,1062,1128,1440,790,585,456,1100,256)
+  )
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  alt_df = dplyr::rename(input_df, wrong_col_name = col01)
+  
+  # act & assert
+  expect_error(explore_output_report("input_df"), "dataset")
+  expect_error(explore_output_report(remote_df), "local")
+  expect_error(explore_output_report(alt_df), "long-thin")
 })
