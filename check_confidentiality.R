@@ -420,7 +420,7 @@ check_confidentialised_results <- function(df,
 #' format. The consequence of using a sparse format is that NA we can not
 #' distinguish between true NA and formatting NA values.
 #' 
-explore_output_report <- function(df, output_dir = NA){
+explore_output_report <- function(df, output_dir = NA, output_label = NA){
   # df is a local dataframe in required format
   assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
   df_classes = tolower(class(df))
@@ -430,82 +430,106 @@ explore_output_report <- function(df, output_dir = NA){
   )
   assert(has_long_thin_format(df), "output not long-thin formatted as expected")
   
+  column_names = colnames(df)
   # column groups
-  col00 = grepl("^col[0-9][0-9]$", colnames(df))
-  val00 = grepl("^val[0-9][0-9]$", colnames(df))
-  summary_var = grepl("^summarised_var$", colnames(df))
-  summary = grepl("^(raw_|conf_|)(count|sum|distinct)$", colnames(df))
+  col00 = column_names[grepl("^col[0-9][0-9]$", column_names)]
+  val00 = column_names[grepl("^val[0-9][0-9]$", column_names)]
   
-  col00 = colnames(df)[col00]
-  val00 = colnames(df)[val00]
+  ## output ----------------------------------------
+  output_dir = ifelse(is.na(output_dir), getwd(), output_dir)
+  output_label = ifelse(is.na(output_label), "", output_label)
+  output_files = c()
+  
+  write_files = function(df, type){
+    clean_time = format(Sys.time(), "%Y-%m-%d %H%M%S")
+    output_file = paste(clean_time, "output report", output_label, type)
+    full_path = paste0(output_dir, "/", output_file, ".csv")
+    
+    write.csv(df, full_path, row.names = FALSE)
+    return(full_path)
+  }
+  
+  ## summary overview ----------------------------------------
+  summary_overview = function(df, label){
+    df %>%
+      summarise(
+        !!sym(paste0("num_", label)) := n(),
+        !!sym(paste0("mean_", label)) := mean(values, na.rm = TRUE),
+        !!sym(paste0("min_", label)) := min(values, na.rm = TRUE),
+        !!sym(paste0("lower_quartile_", label)) := quantile(values, 0.25, na.rm = TRUE),
+        !!sym(paste0("median_", label)) := median(values, na.rm = TRUE),
+        !!sym(paste0("upper_quartile_", label)) := quantile(values, 0.75, na.rm = TRUE),
+        !!sym(paste0("max_", label)) := max(values, na.rm = TRUE),
+        .groups = "drop"
+      )
+  }
   
   #### count ----------------------------------------
   if("conf_count" %in% colnames(df)){
+    # ensure numeric columns are stored as numeric
+    suppressWarnings({ df = dplyr::mutate(df, conf_count = as.numeric(conf_count)) })
     
+    # component summaries
     count_list = lapply(
       1:length(col00),
       function(ii){
         # set up iteration key columns
         this_col = col00[ii]
         this_val = val00[ii]
-        # set up mutate
-        unique_col = unique(df[[this_col]])
-        mutate_formula = glue::glue("ifelse(col == '{unique_col}', total_count, NA)")
-        mutate_list = as.list(rlang::parse_exprs(mutate_formula))
-        names(mutate_list) = unique_col
-        
+        # summarise total count
         df %>%
           group_by(!!!syms(c(col00, this_val, "summarised_var"))) %>%
-          summarise(total_count = sum(conf_count), .groups = "drop") %>%
-          select(col = !!sym(this_col), val = !!sym(this_val), "total_count") %>%
-          mutate(!!! mutate_list) %>%
-          select(-col, -total_count) %>%
-          mutate(val = as.character(val)) %>%
+          summarise(values = sum(conf_count, na.rm = TRUE), .groups = "drop") %>%
+          select(col = !!sym(this_col), val = !!sym(this_val), values) %>%
+          mutate(col = as.character(col), val = as.character(val)) %>%
           return()
       }
     )
     
-    count_list = bind_rows(count_list)
-    # to do here (1) incorporate summarised_var, (2) more efficient if pivot is moved out
-    explore_report(count_list, target = "val", output_file = "review_count", output_dir = output_dir)
+    # produce summary overview
+    count_df = count_list %>%
+      bind_rows() %>%
+      filter(!is.na(col)) %>%
+      group_by(col, val) %>%
+      summary_overview("count")
+    
+    out_file = write_files(count_df, "count")
+    output_files = c(output_files, out_file)
   }
   
   ## distinct ----------------------------------------
   if("conf_distinct" %in% colnames(df)){
+    # ensure numeric columns are stored as numeric
+    suppressWarnings({ df = dplyr::mutate(df, conf_distinct = as.numeric(conf_distinct)) })
     
-    unique_col = unique(df$summarised_var)
-    mutate_formula = glue::glue("ifelse(col == '{unique_col}', conf_distinct, NA)")
-    mutate_list = as.list(rlang::parse_exprs(mutate_formula))
-    names(mutate_list) = unique_col
-    
+    # produce summary overview
     distinct_df = df %>%
-      select(col = summarised_var, conf_distinct) %>%
-      mutate(!!! mutate_list) %>%
-      select(-col, -conf_distinct)
-    # to do - standard code for this across all three sub-sections
+      select(summarised_var, values = conf_distinct) %>%
+      group_by(summarised_var) %>%
+      summary_overview("distinct")
     
-    explore_report(distinct_df, output_file = "review_distinct", output_dir = output_dir)
+    # write output
+    out_file = write_files(distinct_df, "distinct")
+    output_files = c(output_files, out_file)
   }
   
   ## sum ----------------------------------------
   if(all(c("conf_count", "conf_sum") %in% colnames(df))){
+    # ensure numeric columns are stored as numeric
+    suppressWarnings({ df = dplyr::mutate(df, conf_sum = as.numeric(conf_sum)) })
     
-    unique_col = unique(df$summarised_var)
-    mutate_formula = glue::glue("ifelse(col == '{unique_col}', avg, NA)")
-    mutate_list = as.list(rlang::parse_exprs(mutate_formula))
-    names(mutate_list) = unique_col
-    
+    # produce summary overview
     sum_df = df %>%
-      mutate(
-        conf_sum = as.numeric(conf_sum),
-        conf_count = as.numeric(conf_count),
-        avg = conf_sum / conf_count
-        ) %>%
-      select(col = summarised_var, avg) %>%
-      mutate(!!! mutate_list) %>%
-      select(-col, -avg)
+      mutate(avg = conf_sum / conf_count) %>%
+      select(summarised_var, values = avg) %>%
+      group_by(summarised_var) %>%
+      summary_overview("avg")
     
-    explore_report(sum_df, output_file = "review_averages", output_dir = output_dir)
+    # write output
+    out_file = write_files(sum_df, "average")
+    output_files = c(output_files, out_file)
   }
-  
+
+  ## return list of files written --------------------
+  return(output_files)
 }
