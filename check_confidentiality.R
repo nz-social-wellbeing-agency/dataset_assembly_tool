@@ -76,6 +76,67 @@ check_rounding_to_base_df <- function(df, column, base = 3, na.rm = TRUE){
   return(check_rounding_to_base_array(col_to_array, base = base, na.rm = na.rm))
 }
 
+## check graduated rounding (dataframe) ---------------------------------------
+#' 
+#' Returns TRUE if the provided column in the dataframe only contains values
+#' that are graduated rounded:
+#' 
+#' values   base
+#'    0-18    3
+#'     19     2
+#'   20-99    5
+#' 100-999   10
+#'   1000+  100
+#' 
+#' If na.rm = TRUE (default) then ignores missing (NA) values.
+#' Warns if all values are missing (NA)
+#' Errors on non-numeric input.
+#' 
+check_graduated_rounding_df <- function(df, column, na.rm = TRUE){
+  # df is a dataframe
+  assert(tibble::is_tibble(df) | is.data.frame(df) | dplyr::is.tbl(df), "df is not dataset")
+  # df is a local dataset (not remote)
+  df_classes = tolower(class(df))
+  assert(
+    !any(sapply(df_classes, grepl, pattern = "sql")),
+    "df must be a local dataset"
+  )
+  # column is part of df
+  assert(is.character(column), "column must be of type character")
+  assert(column %in% colnames(df), "column is not a column name of df")
+  assert(is.logical(na.rm), "na.rm must be logical")
+  
+  # run checks
+  col_to_array = df[[column]]
+  
+  abs_0_18 = 0 <= abs(col_to_array) & abs(col_to_array) < 19
+  abs_19 = 19 <= abs(col_to_array) & abs(col_to_array) < 20
+  abs_20_99 = 20 <= abs(col_to_array) & abs(col_to_array) < 100
+  abs_100_999 = 100 <= abs(col_to_array) & abs(col_to_array) < 1000
+  abs_1000_up = 1000 <= abs(col_to_array)
+  
+  test_0_18 = col_to_array %% 3 == 0
+  test_19 = col_to_array %% 2 == 0
+  test_20_99 = col_to_array %% 5 == 0
+  test_100_999 = col_to_array %% 10 == 0
+  test_1000_up = col_to_array %% 100 == 0
+  
+  results = (abs_0_18 & test_0_18) |
+    (abs_19 & test_19) |
+    (abs_20_99 & test_20_99) |
+    (abs_100_999 & test_100_999) |
+    (abs_1000_up & test_1000_up)
+  
+  if(sum(is.na(results)) == length(results))
+    warning("all input values are NA")
+  
+  if(na.rm)
+    results = results | is.na(col_to_array)
+  
+  result = all(results, na.rm = na.rm)
+  return(ifelse(is.na(result), FALSE, result))
+}
+
 ## check random rounding ------------------------------------------------------
 #' 
 #' Returns TRUE if the provided column in the dataframe has been rounded to the
@@ -363,7 +424,7 @@ check_confidentialised_results <- function(df,
     error = function(e){ return("skip") }
   )
   log = record_log(log, col, chk, result)
-
+  
   #### count ----------------------------------------
   col = "conf_count"
   
@@ -373,14 +434,14 @@ check_confidentialised_results <- function(df,
     error = function(e){ return("skip") }
   )
   log = record_log(log, col, chk, result)
-
+  
   chk = glue::glue("suppressed if raw < {COUNT_THRESHOLD}")
   result = tryCatch(
     ifelse(check_small_count_suppression(df, "conf_count", COUNT_THRESHOLD, "raw_count"), "pass", "fail"),
     error = function(e){ return("skip") }
   )
   log = record_log(log, col, chk, result)
-
+  
   #### sum ----------------------------------------
   col = "conf_sum"
   
@@ -399,9 +460,9 @@ check_confidentialised_results <- function(df,
     r1 == "skip" & r2 == "skip" ~ "skip",
     r1 == "pass" | r2 == "pass" ~ "pass"
   )
-    
+  
   log = record_log(log, col, chk, result)
-
+  
   #### zero counts ----------------------------------------
   
   result = tryCatch(
@@ -409,7 +470,7 @@ check_confidentialised_results <- function(df,
     error = function(e){ return("skip") }
   )
   log = record_log(log, "all", "absence of zero counts", result)
-
+  
   # convert log to formatted message - ensure alignment of checks
   format_string = glue::glue("%{max(nchar(log$column))}s %{max(nchar(log$check))}s : %s")
   msg = sprintf(format_string, log$column, log$check, toupper(log$result))
@@ -537,7 +598,7 @@ explore_output_report <- function(df, output_dir = NA, output_label = NA){
     out_file = write_files(sum_df, "average")
     output_files = c(output_files, out_file)
   }
-
+  
   ## return list of files written --------------------
   return(output_files)
 }

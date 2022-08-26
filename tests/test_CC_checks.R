@@ -136,6 +136,60 @@ test_that("rounding df errors when expected", {
 })
 
 #####################################################################
+# check_graduated_rounding_df(df, column, na.rm = TRUE)
+
+test_that("graduated rounding passes & failed when expected", {
+  # arrange
+  input_df = data.frame(
+    grr = c(1:6*3, 18, 20, 4:20*5, 10:100*10, 10:20*100),
+    gx1 = c(1:6*2, 18, 20, 4:20*5, 10:100*10, 10:20*100),
+    gx2 = c(1:6*3, 19, 20, 4:20*5, 10:100*10, 10:20*100),
+    gx3 = c(1:6*3, 18, 20, 4:20*5+1, 10:100*10, 10:20*100),
+    gx4 = c(1:6*3, 18, 20, 4:20*5, 10:100*10+1, 10:20*100),
+    gx5 = c(1:6*3, 18, 20, 4:20*5, 10:100*10, 10:20*100+1)
+  )
+  na_set = sample(1:nrow(input_df), 20)
+  input_df$grrNA = input_df$grr
+  input_df$grrNA[na_set] = NA
+
+  # act & assert
+  expect_true(check_graduated_rounding_df(input_df, "grr", na.rm = FALSE))
+  expect_true(check_graduated_rounding_df(input_df, "grr", na.rm = TRUE))
+  
+  expect_false(check_graduated_rounding_df(input_df, "grrNA", na.rm = FALSE))
+  expect_true(check_graduated_rounding_df(input_df, "grrNA", na.rm = TRUE))
+  
+  expect_false(check_graduated_rounding_df(input_df, "gx1", na.rm = FALSE))
+  expect_false(check_graduated_rounding_df(input_df, "gx2", na.rm = FALSE))
+  expect_false(check_graduated_rounding_df(input_df, "gx3", na.rm = FALSE))
+  expect_false(check_graduated_rounding_df(input_df, "gx4", na.rm = TRUE))
+  expect_false(check_graduated_rounding_df(input_df, "gx5", na.rm = TRUE))
+})
+
+test_that("graduated rounding errors when expected", {
+  input_df = data.frame(
+    grr = c(1:6*3, 18, 20, 4:20*5, 10:100*10, 10:20*100),
+    gx1 = c(1:6*2, 18, 20, 4:20*5, 10:100*10, 10:20*100),
+    gx2 = c(1:6*3, 19, 20, 4:20*5, 10:100*10, 10:20*100),
+    gx3 = c(1:6*3, 18, 20, 4:20*5+1, 10:100*10, 10:20*100),
+    gx4 = c(1:6*3, 18, 20, 4:20*5, 10:100*10+1, 10:20*100),
+    gx5 = c(1:6*3, 18, 20, 4:20*5, 10:100*10, 10:20*100+1)
+  )
+  input_df$nas = NA
+  remote_df = dbplyr::tbl_lazy(input_df, con = dbplyr::simulate_mssql())
+  
+  expect_error(check_graduated_rounding_df("input_df", "grr", na.rm = FALSE), "dataset")
+  expect_error(check_graduated_rounding_df(remote_df, "grr", na.rm = FALSE), "local")
+  expect_error(check_graduated_rounding_df(input_df, 2, na.rm = FALSE), "character")
+  expect_error(check_graduated_rounding_df(input_df, "grrXX", na.rm = FALSE), "column name")
+  
+  # errors from passing column to vector
+  expect_error(check_graduated_rounding_df(input_df, "grr", na.rm = "TRUE"), "logical")
+  
+  expect_warning(check_graduated_rounding_df(input_df, "nas", na.rm = TRUE), "NA")
+})
+
+#####################################################################
 # check_random_rounding(df, raw_col = NA, conf_col, base = 3)
 
 test_that("random rounding checks pass & fail when expected", {
