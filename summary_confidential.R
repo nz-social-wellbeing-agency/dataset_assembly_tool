@@ -410,6 +410,85 @@ apply_random_rounding <- function(df, RR_columns, BASE = 3, stable_across_cols =
   return(df)
 }
 
+## apply graduated random rounding --------------------------------------------
+#'
+#' Applied graduated random rounding (GRR) to specified columns.
+#' Creates raw_ and conf_ columns so original values are preserved.
+#' 
+#' If stable_across_cols are provided, then these will be used to generate
+#' seeds for random rounding to ensure that rounding is stable between 
+#' repeated use of this function. Increases run time.
+#' 
+#' Thresholds for graduation are set by the Stats NZ microdata output guide.
+#' Only apply one of GRR or RR3. Applyng both will cause errors.
+#' 
+apply_graduated_random_rounding <- function(df, GRR_columns, stable_across_cols = NULL){
+  # checks
+  assert(is.data.frame(df) | dplyr::is.tbl(df), "input [df] must be of type data.frame")
+  assert(all(GRR_columns %in% colnames(df)), "[GRR_columns] must be column names of [df]")
+  # check stable_across_cols if provided
+  if(!is.null(stable_across_cols)){
+    assert(all(stable_across_cols %in% colnames(df)), "[stable_across_cols] must be column names of [df]")
+    assert(!any(stable_across_cols %in% GRR_columns), "[stable_across_cols] should not be found in [GRR_columns]")
+  }
+  
+  # loop through column types
+  for(this_col in GRR_columns){
+    # value for this iteration
+    raw_col = paste0("raw_", this_col)
+    conf_col = paste0("conf_", this_col)
+    
+    # make raw_* column
+    df = dplyr::rename(df, !!sym(raw_col) := !!sym(this_col))
+    # make conf_* column
+    if(is.null(stable_across_cols)){
+      # round
+      df = dplyr::mutate(df, !!sym(conf_col) := case_when(
+        0 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 19 ~ 
+          randomly_round_vector(!!sym(raw_col), base = 3),
+        19 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 20 ~ 
+          randomly_round_vector(!!sym(raw_col), base = 2),
+        20 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 100 ~ 
+          randomly_round_vector(!!sym(raw_col), base = 5),
+        100 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 1000 ~ 
+          randomly_round_vector(!!sym(raw_col), base = 10),
+        1000 <= abs(!!sym(raw_col)) ~ 
+          randomly_round_vector(!!sym(raw_col), base = 100)
+      ))
+    } else {
+      # make seeds
+      sort_remove_nas = function(x){
+        x = unname(x[!is.na(x)])
+        return(paste(sort(x), collapse = " "))
+      }
+      concated = dplyr::select(df, dplyr::all_of(stable_across_cols)) %>%
+        apply(MARGIN = 1, sort_remove_nas)
+      
+      df$tmp_concatenated = concated
+      df$tmp_hashed = sapply(df$tmp_concatenated, digest::digest)  
+      df = dplyr::mutate(df, tmp_seed = digest::digest2int(tmp_hashed))
+      # round
+      df = df %>%
+        dplyr::mutate(!!sym(conf_col) := case_when(
+          0 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 19 ~ 
+            randomly_round_vector(!!sym(raw_col), base = 3, seeds = tmp_seed),
+          19 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 20 ~ 
+            randomly_round_vector(!!sym(raw_col), base = 2, seeds = tmp_seed),
+          20 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 100 ~ 
+            randomly_round_vector(!!sym(raw_col), base = 5, seeds = tmp_seed),
+          100 <= abs(!!sym(raw_col)) & abs(!!sym(raw_col)) < 1000 ~ 
+            randomly_round_vector(!!sym(raw_col), base = 10, seeds = tmp_seed),
+          1000 <= abs(!!sym(raw_col)) ~ 
+            randomly_round_vector(!!sym(raw_col), base = 100, seeds = tmp_seed)
+        )) %>%
+        select(-tmp_concatenated, -tmp_seed, -tmp_hashed)
+    }
+    
+  } # end for loop
+  
+  return(df)
+}
+
 ## suppress small counts ------------------------------------------------------
 #'
 #' Suppresses values where the count is too small.

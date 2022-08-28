@@ -20,12 +20,14 @@
 #' Testing the following functions that confidentialise output
 #'
 #' apply_random_rounding(df, RR_columns, BASE = 3, stable_across_cols = NULL)
+#' apply_graduated_random_rounding(df, GRR_columns, stable_across_cols = NULL)
 #' apply_small_count_suppression(df, suppress_cols, threshold, count_cols = suppress_cols)
 #' confidentialise_results(df, stable_RR, sum_RR, BASE, COUNT_THRESHOLD, SUM_THRESHOLD)
 #' 
 context("summary confidential - confidentialise")
 
 #####################################################################
+# apply_random_rounding(df, RR_columns, BASE = 3, stable_across_cols = NULL)
 test_that("new columns created", {
   # arrange
   input_df = data.frame(label1 = rep(c("a","b"), 50),
@@ -162,6 +164,120 @@ test_that("input checks stop execution", {
 })
 
 #####################################################################
+# apply_graduated_random_rounding(df, GRR_columns, stable_across_cols = NULL)
+
+test_that("new columns created", {
+  # arrange
+  input_df = data.frame(label1 = rep(c("a","b"), 50),
+                        label2 = c(rep("z",50), rep("y",50)),
+                        distinct = 1:100,
+                        count = 2 + 1:100,
+                        sum = 10 + 1:100)
+  # act
+  output_df1 = apply_graduated_random_rounding(input_df, "count")
+  output_df2 = apply_graduated_random_rounding(input_df, "distinct")
+  output_df3 = apply_graduated_random_rounding(input_df, c("distinct", "count"))
+  # assert
+  expect_true(all(c("raw_count", "conf_count") %in% colnames(output_df1)))
+  expect_true(all(c("raw_count", "conf_count") %in% colnames(output_df3)))
+  expect_true(all(c("raw_distinct", "conf_distinct") %in% colnames(output_df2)))
+  expect_true(all(c("raw_distinct", "conf_distinct") %in% colnames(output_df3)))
+})
+
+test_that("graduated random rounding applied", {
+  # arrange
+  input_df = data.frame(
+    label1 = rep(c("a","b"), 50),
+    label2 = c(rep("z",50), rep("y",50)),
+    count0_18 = sample(1:18, 100, replace = TRUE),
+    count19 = rep(19, 100),
+    count20_99 = sample(20:99, 100, replace = TRUE),
+    count100_999 = sample(100:999, 100, replace = TRUE),
+    count1000 = sample(1000:3000, 100, replace = TRUE)
+  )
+  # act
+  output_df0_18 = apply_graduated_random_rounding(input_df, "count0_18")
+  output_df19 = apply_graduated_random_rounding(input_df, "count19")
+  output_df20_99 = apply_graduated_random_rounding(input_df, "count20_99")
+  output_df100_999 = apply_graduated_random_rounding(input_df, "count100_999")
+  output_df1000 = apply_graduated_random_rounding(input_df, "count1000")
+  # assert
+  expect_true(all(output_df0_18$conf_count %% 3 == 0))
+  expect_true(all(output_df19$conf_count %% 2 == 0))
+  expect_true(all(output_df20_99$conf_count %% 5 == 0))
+  expect_true(all(output_df100_999$conf_count %% 10 == 0))
+  expect_true(all(output_df1000$conf_count %% 100 == 0))
+  expect_true(all(abs(output_df0_18$conf_count - output_df0_18$raw_count) < 3))
+  expect_true(all(abs(output_df19$conf_count - output_df19$raw_count) < 2))
+  expect_true(all(abs(output_df20_99$conf_count - output_df20_99$raw_count) < 5))
+  expect_true(all(abs(output_df100_999$conf_count - output_df100_999$raw_count) < 10))
+  expect_true(all(abs(output_df1000$conf_count - output_df1000$raw_count) < 100))
+})
+
+test_that("graduated rounding can be stable", {
+  # arrange
+  input_df = data.frame(label1 = rep(c("a","b"), 50),
+                        label2 = c(rep("z",50), rep("y",50)),
+                        count = 2 + 1:100)
+  # act
+  output_df_r1 = apply_graduated_random_rounding(input_df, "count")
+  output_df_r2 = apply_graduated_random_rounding(input_df, "count")
+  output_df_s1 = apply_graduated_random_rounding(input_df, "count", stable_across_cols = "label1")
+  output_df_s2 = apply_graduated_random_rounding(input_df, "count", stable_across_cols = "label1")
+  output_df_s3 = apply_graduated_random_rounding(input_df, "count", stable_across_cols = c("label1", "label2"))
+  output_df_s4 = apply_graduated_random_rounding(input_df, "count", stable_across_cols = c("label1", "label2"))
+  # assert
+  expect_false(isTRUE(all_equal(output_df_r1, output_df_r2)))
+  expect_false(isTRUE(all_equal(output_df_r1, output_df_s1)))
+  expect_false(isTRUE(all_equal(output_df_r1, output_df_s2)))
+  expect_true(all_equal(output_df_s1, output_df_s2))
+  expect_false(isTRUE(all_equal(output_df_r1, output_df_s3)))
+  expect_false(isTRUE(all_equal(output_df_r1, output_df_s4)))
+  expect_false(isTRUE(all_equal(output_df_s1, output_df_s3)))
+  expect_false(isTRUE(all_equal(output_df_s1, output_df_s4)))
+  expect_true(all_equal(output_df_s3, output_df_s4))
+})
+
+test_that("stable graduated rounding is independent of column order", {
+  # arrange
+  input_df1 = data.frame(label1 = rep(c("a","b"), 50),
+                         label2 = c(rep("z",50), rep("y",50)),
+                         count = 2 + 1:100)
+  input_df2 = data.frame(label1 = c(rep("z",50), rep("y",50)),
+                         label2 = rep(c("a","b"), 50),
+                         count = 2 + 1:100)
+  # act
+  output1 = apply_graduated_random_rounding(input_df1, "count", stable_across_cols = c("label1", "label2"))
+  output2 = apply_graduated_random_rounding(input_df1, "count", stable_across_cols = c("label2", "label1"))
+  output3 = apply_graduated_random_rounding(input_df2, "count", stable_across_cols = c("label1", "label2"))
+  output4 = apply_graduated_random_rounding(input_df2, "count", stable_across_cols = c("label2", "label1"))
+  # force consistent colnames
+  output3 = dplyr::rename(output3, label1 = label2, label2 = label1)
+  output4 = dplyr::rename(output4, label1 = label2, label2 = label1)
+  
+  # assert
+  expect_true(all_equal(output1, output2))
+  expect_true(all_equal(output3, output4))
+  expect_true(all_equal(output1, output3))
+  expect_true(all_equal(output2, output4))
+})
+
+
+test_that("input checks stop execution", {
+  input_df = data.frame(label1 = rep(c("a","b"), 50),
+                        label2 = c(rep("z",50), rep("y",50)),
+                        distinct = 1:100,
+                        count = 2 + 1:100,
+                        sum = 10 + 1:100)
+  
+  expect_error(apply_graduated_random_rounding("input_df", "count", stable_across_cols = NULL), "data\\.frame")
+  expect_error(apply_graduated_random_rounding(input_df, "not col", stable_across_cols = NULL), "column")
+  expect_error(apply_graduated_random_rounding(input_df, "count", stable_across_cols = "not col"), "column")
+  expect_error(apply_graduated_random_rounding(input_df, "count", stable_across_cols = "count"), "should not")
+})
+
+#####################################################################
+# apply_small_count_suppression(df, suppress_cols, threshold, count_cols = suppress_cols)
 test_that("suppression occurs", {
   # arrange
   input_df = data.frame(label1 = rep(c("a","b"), 5),
@@ -304,6 +420,8 @@ test_that("input checks stop execution", {
 })
 
 #####################################################################
+# confidentialise_results(df, stable_RR, sum_RR, BASE, COUNT_THRESHOLD, SUM_THRESHOLD)
+
 test_that("confidentialisation random rounding occurs", {
   # arrange
   input_df = data.frame(col01 = rep("label1", 100),
