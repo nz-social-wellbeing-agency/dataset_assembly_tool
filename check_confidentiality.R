@@ -109,23 +109,15 @@ check_graduated_rounding_df <- function(df, column, na.rm = TRUE){
   # run checks
   col_to_array = df[[column]]
   
-  abs_0_18 = 0 <= abs(col_to_array) & abs(col_to_array) < 19
-  abs_19 = 19 <= abs(col_to_array) & abs(col_to_array) < 20
-  abs_20_99 = 20 <= abs(col_to_array) & abs(col_to_array) < 100
-  abs_100_999 = 100 <= abs(col_to_array) & abs(col_to_array) < 1000
-  abs_1000_up = 1000 <= abs(col_to_array)
+  expected_base = dplyr::case_when(
+    0 <= abs(col_to_array) & abs(col_to_array) < 19 ~ 3,
+    19 <= abs(col_to_array) & abs(col_to_array) < 20 ~ 2,
+    20 <= abs(col_to_array) & abs(col_to_array) < 100 ~ 5,
+    100 <= abs(col_to_array) & abs(col_to_array) < 1000 ~ 10,
+    1000 <= abs(col_to_array) ~ 100
+  )
   
-  test_0_18 = col_to_array %% 3 == 0
-  test_19 = col_to_array %% 2 == 0
-  test_20_99 = col_to_array %% 5 == 0
-  test_100_999 = col_to_array %% 10 == 0
-  test_1000_up = col_to_array %% 100 == 0
-  
-  results = (abs_0_18 & test_0_18) |
-    (abs_19 & test_19) |
-    (abs_20_99 & test_20_99) |
-    (abs_100_999 & test_100_999) |
-    (abs_1000_up & test_1000_up)
+  results = col_to_array %% expected_base == 0
   
   if(sum(is.na(results)) == length(results))
     warning("all input values are NA")
