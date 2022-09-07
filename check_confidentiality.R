@@ -473,13 +473,30 @@ check_confidentialised_results <- function(df,
 ## summarised output overview report ------------------------------------------
 #' 
 #' Generate overview reports of summarised dataset for research review.
-#' Visual inspection of these reports is expected to be part of checks run
-#' during delivery.
+#' Visual inspection of these reports as part of checks run during delivery
+#' will help confirm values are reasonable.
 #' 
-#' Note that NA values output in these reports are not reliable. In order to
-#' make use of existing reporting functions, we arrange the dataset in a sparse
-#' format. The consequence of using a sparse format is that NA we can not
-#' distinguish between true NA and formatting NA values.
+#' This function writes up to three files to the folder - one for each of
+#' distinct, count, and sum. Each file provides an overview of the range
+#' of values a measure takes.
+#' 
+#' For example
+#' - How much does the average value vary across the dataset?
+#' - How large is a group at its largest and how small at its smallest?
+#' 
+#' It is expected that a research will have some idea of what reasonable values
+#' are for each varaible and hence will be able to confirm from such a summary
+#' that the outputs are as expected.
+#' 
+#' For example, would you expect to observe...
+#' - the average income to be between $12k and $65k in the results?
+#' - the number of women to be between 100 and 10,000 in the results?
+#' 
+#' Note that numbers may fluctuate depending on the subgroups used. For example,
+#' if results include the number of people by region and occupation, we might
+#' expect the number of people in each region to be fairly stable. But if we
+#' also included the same results for only those people who are recent migrant,
+#' then we should see greater variation in the number of people in each region. 
 #' 
 explore_output_report <- function(df, output_dir = NA, output_label = NA){
   # df is a local dataframe in required format
@@ -558,7 +575,7 @@ explore_output_report <- function(df, output_dir = NA, output_label = NA){
     output_files = c(output_files, out_file)
   }
   
-  ## distinct ----------------------------------------
+  #### distinct ----------------------------------------
   if("conf_distinct" %in% colnames(df)){
     # ensure numeric columns are stored as numeric
     suppressWarnings({ df = dplyr::mutate(df, conf_distinct = as.numeric(conf_distinct)) })
@@ -574,7 +591,7 @@ explore_output_report <- function(df, output_dir = NA, output_label = NA){
     output_files = c(output_files, out_file)
   }
   
-  ## sum ----------------------------------------
+  #### sum ----------------------------------------
   if(all(c("conf_count", "conf_sum") %in% colnames(df))){
     # ensure numeric columns are stored as numeric
     suppressWarnings({ df = dplyr::mutate(df, conf_sum = as.numeric(conf_sum)) })
