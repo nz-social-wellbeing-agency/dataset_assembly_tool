@@ -45,6 +45,7 @@ source("general_assembly_tool_functions.R")
 source("general_assembly_tool.R")
 source("overview_dataset.R")
 source("summary_confidential.R")
+source("check_confidentiality.R")
 testthat::test_dir("./tests")
 
 ## test in sections -------------------------------------------------------------------------------
@@ -95,6 +96,10 @@ if (FALSE) {
   testthat::test_file("./tests/test_SC_support_functions.R")
   testthat::test_file("./tests/test_SC_summarise.R")
   testthat::test_file("./tests/test_SC_confidentialise.R")
+  
+  # test checking of output
+  source("check_confidentiality.R")
+  testthat::test_file("./tests/test_CC_checks.R")
 }
 
 ## tidy up ----------------------------------------------------------------------------------------
