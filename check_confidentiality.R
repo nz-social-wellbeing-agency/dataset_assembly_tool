@@ -484,13 +484,13 @@ check_confidentialised_results <- function(df,
 #' - How much does the average value vary across the dataset?
 #' - How large is a group at its largest and how small at its smallest?
 #' 
-#' It is expected that a research will have some idea of what reasonable values
-#' are for each varaible and hence will be able to confirm from such a summary
+#' It is expected that researchers will have some idea of what reasonable values
+#' are for each variable and hence will be able to confirm from such a summary
 #' that the outputs are as expected.
 #' 
 #' For example, would you expect to observe...
 #' - the average income to be between $12k and $65k in the results?
-#' - the number of women to be between 100 and 10,000 in the results?
+#' - the number of people to be between 100 and 10,000 in the results?
 #' 
 #' Note that numbers may fluctuate depending on the subgroups used. For example,
 #' if results include the number of people by region and occupation, we might
