@@ -484,19 +484,19 @@ check_confidentialised_results <- function(df,
 #' - How much does the average value vary across the dataset?
 #' - How large is a group at its largest and how small at its smallest?
 #' 
-#' It is expected that researchers will have some idea of what reasonable values
-#' are for each variable and hence will be able to confirm from such a summary
-#' that the outputs are as expected.
+#' It is assumed that a researchers will know what reasonable values are for
+#' each variable and hence will be able to review from such a summary that the
+#' outputs are as expected.
 #' 
 #' For example, would you expect to observe...
 #' - the average income to be between $12k and $65k in the results?
 #' - the number of people to be between 100 and 10,000 in the results?
 #' 
-#' Note that numbers may fluctuate depending on the subgroups used. For example,
-#' if results include the number of people by region and occupation, we might
-#' expect the number of people in each region to be fairly stable. But if we
-#' also included the same results for only those people who are recent migrant,
-#' then we should see greater variation in the number of people in each region. 
+#' Note that values may fluctuate depending on the subgroups used.
+#' For example, if there are results for both all New Zealand and for only
+#' those people who are recent migrants, then the range of reasonable values
+#' should be wider than if results included only the entire population
+#' or only recent migrants. 
 #' 
 explore_output_report <- function(df, output_dir = NA, output_label = NA){
   # df is a local dataframe in required format
