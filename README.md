@@ -9,6 +9,17 @@ This repository provides the code for the Dataset Assembly Tool. It should be us
 
 Users should also review the training presentation and manual: **The Dataset Assembly Tool - Intro and training**. In addition to the video presentation, the extensive speakers notes in this document serve as a users' manual for the tool. This guide covers in installation of the assembly tool and the steps to creating a new assembly.
 
+Included with the assembly tool are our tools for summarising, confidentilaising, and checking summary output. These tools can be used with the assembly tool, or separately. Training material for these tools is available on the Agency's guidance page ([here](https://swa.govt.nz/publications/guidance/)).
+
+List of reference material:
+* [Assembly tool primer and guide](https://swa.govt.nz/assets/Publications/guidance/Introduction-to-the-Dataset-Assembly-tool-primer-and-guide.pdf)
+* [Assembly tool intro and training](https://swa.govt.nz/assets/Publications/guidance/Dataset-Assembly-Tool-introduction-and-training-presentation.pdf)
+* [Assembly tool training presentation](https://vimeo.com/490565559)
+* [Assembly tool demonstration](https://vimeo.com/561152732/435a570079)
+* [Summarise and confidentialise training](https://swa.govt.nz/assets/Publications/guidance/summarise-and-confidentialise-tools-training-guide-v2.pdf)
+* [Self-checking tools training](https://swa.govt.nz/assets/Publications/guidance/self-checking-tools-training-guide.pdf)
+* [IDI exemplar project](https://swa.govt.nz/assets/Publications/guidance/IDI-Exemplar-project-guide.pdf)
+
 ## Installation
 To install the tool, download this repository, copy it to your working location and unzip it. There are then two steps to get the tool running:
 
