@@ -278,6 +278,10 @@ check_absence_of_zero_counts <- function(df, conf_count_col, print_on_fail = FAL
   val00 = column_names[grepl("^val[0-9][0-9]$", column_names)]
   summary_var = "summarised_var"
   
+  # convert all factor columns to character
+  df = df %>%
+    mutate(across(where(is.factor), as.character))
+  
   # all sub-summaries with the df
   subsummaries = df %>%
     dplyr::select(all_of(c(col00, summary_var))) %>%
@@ -341,6 +345,10 @@ expand_to_include_zero_counts <- function(df){
   summary_var = "summarised_var"
   
   col_order = colnames(df)
+  
+  # convert all factor columns to character
+  df = df %>%
+    mutate(across(where(is.factor), as.character))
   
   # all sub-summaries with the df
   subsummaries = df %>%
