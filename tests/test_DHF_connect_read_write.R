@@ -45,7 +45,7 @@ test_that("table existence can be determined", {
   db_con <- create_database_connection(database = our_db)
 
   # table we know exists (specific to IDI)
-  IDI_db <- "[IDI_Clean_20200120]"
+  IDI_db <- "[IDI_Clean_202210]"
   IDI_schema <- "[data]"
   IDI_tbl <- "[personal_detail]"
 
