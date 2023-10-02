@@ -53,8 +53,9 @@ library(dbplyr)
 #' functions. It is called by create_database_connection.
 #'
 set_connection_string <- function(server, database, port = NA) {
-  connstr <- "DRIVER=ODBC Driver 17 for SQL Server; "
+  connstr <- "DRIVER=ODBC Driver 18 for SQL Server; "
   connstr <- paste0(connstr, "Trusted_Connection=Yes; ")
+  connstr <- paste0(connstr, "TrustServerCertificate=Yes; ")
   connstr <- paste0(connstr, "DATABASE=", database, "; ")
   connstr <- paste0(connstr, "SERVER=", server)
   if (!is.na(port)) {
@@ -167,7 +168,13 @@ create_access_point <- function(db_connection, db, schema, tbl_name) {
     {
       # access table
       if (nchar(schema) > 0 | nchar(db) > 0) {
-        table_access <- dplyr::tbl(db_connection, from = dbplyr::in_schema(db_schema(db, schema), tbl_name))
+        table_access <- dplyr::tbl(
+	  db_connection,
+	  from = dbplyr::in_schema(
+            dbplyr::sql(db_schema(db, schema)),
+            dbplyr::sql(tbl_name)
+          )
+	)
       } else {
         table_access <- dplyr::tbl(db_connection, from = tbl_name)
       }
