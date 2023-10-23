@@ -36,8 +36,10 @@ We encourage researchers to adopt the assembly tool into their own research proj
 
 We discourage researchers in the IDI from editing the code of the tool. Part of the value of a tool is the consistency it provides between researchers. When researchers begin to edit the tool, then we no longer have a shared tool but instead have a collection of bespoke code that with a common origin. The overview document provides some guidance for other ways you can build upon the Dataset Assembly Tool without editing its code.
 
-## Citation
+## Conversion to R packages
+The assembly tool has been converted into a series of four R packages for ease of researcher use. These can be found [here](https://github.com/simon-anasta/idi_tool_packages).
 
+## Citation
 Social Wellbeing Agency (2020). Dataset assembly tool. Source code. https://github.com/nz-social-wellbeing-agency/dataset_assembly_tool
 
 ## Getting Help
